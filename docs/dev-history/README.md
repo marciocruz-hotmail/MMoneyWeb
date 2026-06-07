@@ -2,6 +2,12 @@
 
 Arquivo de **histórico** do projeto MMoneyWeb.
 
+## Entradas
+
+| Data | Tema | Arquivo |
+|------|------|---------|
+| 2026-06-07 | Deploy IIS EC2 (`mmoneyweb.com`) | [2026-06-07_deploy-iis-mmoneyweb.md](./2026-06-07_deploy-iis-mmoneyweb.md) |
+
 ## Uso
 
 | Tipo de conteúdo | Onde colocar |

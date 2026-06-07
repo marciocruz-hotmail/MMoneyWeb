@@ -4,15 +4,15 @@
 > **Histórico integral:** `docs/dev-history/`  
 > **Contexto fixo:** `AI-CONTEXT.md` | **Pendências:** `BACKLOG-DEV.md` | **Índice temas:** `.cursor/context/2026_06_07_indice-memoria-ia.md`
 
-**Última atualização:** 2026-06-07 — fundação visual AdminLTE 4
+**Última atualização:** 2026-06-07 — deploy IIS + view Lançamentos
 
 ---
 
 ## Estado atual do projeto
 
-Monólito **ASP.NET Core Blazor Web App** (.NET 10, Interactive Server) com **ASP.NET Core Identity**, **EF Core 10** e SQL Server. Dois contextos: `ApplicationDbContext` (Identity) e `MMoneyDbContext` (financeiro, via `AddDbContextFactory`). Página inicial mínima com auth; páginas demo removidas. **Sem** funcionalidades de negócio financeiro.
+Monólito **ASP.NET Core Blazor Web App** (.NET 10, Interactive Server) com **ASP.NET Core Identity**, **EF Core 10** e SQL Server. View **Lançamentos** com grid, filtros, modal create/edit e persistência no banco legado `mmoneyweb`. Deploy alvo: IIS em `C:\inetpub\vhosts\mmoneyweb.com` (EC2); app validado em Kestrel (HTTP 200); **IIS em ajuste final** via `scripts/configure-iis-mmoneyweb.ps1`.
 
-**Build** e **testes** xUnit OK na fundação.
+**Build** e **testes** xUnit OK.
 
 ---
 
@@ -29,6 +29,17 @@ Monólito **ASP.NET Core Blazor Web App** (.NET 10, Interactive Server) com **AS
 ---
 
 ## Últimas alterações relevantes
+
+### 2026-06-07 — Deploy IIS (sessão EC2)
+- Servidor: site `mmoneyweb.com` (id 4), pool dedicado sem CLR, path `C:\inetpub\vhosts\mmoneyweb.com`.
+- Pré-requisito: **.NET 10 Hosting Bundle** (não SDK); módulo `AspNetCoreModuleV2`.
+- App OK em Kestrel (`dotnet MMoneyWeb.Web.dll` → HTTP 200 login); IIS 500/503 por pool v4.0, binding só `www`, `processPath` sem caminho completo, permissões `logs`/`keys`.
+- Código: `App:RequireHttps` opcional, Data Protection em `keys/`, `web.config` IIS, publish sem arquivos Development.
+- Scripts: `configure-iis-mmoneyweb.ps1`, `publish-iis.ps1`, `iis-diagnostico.ps1`.
+- Histórico completo: `docs/dev-history/2026-06-07_deploy-iis-mmoneyweb.md`.
+
+### 2026-06-07 — View Lançamentos + modal create/edit
+- Grid com saldo, cores por status/valor, edição inline; `LancamentosViewService`, entidades legadas, `CreateEditLancamentoModal`.
 
 ### 2026-06-07 — Fundação visual AdminLTE 4 + Bootstrap 5
 - Shell administrativo: `AppHeader`, `AppSidebar`, `AppFooter`, `MainLayout`, `AuthLayout`.

@@ -12,6 +12,9 @@
 
 # Connection strings locais (copiar de appsettings.Development.example.json)
 src/MMoneyWeb.Web/appsettings.Development.json
+src/MMoneyWeb.Web/appsettings.Production.json
+publish/
+**/keys/
 
 # User-specific files
 *.rsuser

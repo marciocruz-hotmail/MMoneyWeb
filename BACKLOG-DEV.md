@@ -29,15 +29,17 @@ Pendências **ativas** do **MMoneyWeb**. Itens concluídos: registo em `CHANGELO
 
 ## Alta prioridade
 
-- [ ] **M-ARCH-01** — Modelar entidades em `Domain/` e primeira migration do `MMoneyDbContext`
+- [ ] **M-OPS-02** — Concluir deploy IIS: reexecutar `configure-iis-mmoneyweb.ps1`, confirmar HTTP 200 em `www.mmoneyweb.com` e `mmoneyweb.com`
+- [ ] **M-OPS-03** — Republicar DLL atual (`RequireHttps` opcional + Data Protection `keys/`) em `C:\inetpub\vhosts\mmoneyweb.com`
 - [ ] **M-SEC-01** — Desativar registro público após criação do primeiro usuário (antes de produção)
-- [ ] **M-OPS-01** — Configurar connection strings seguras (User Secrets dev / IIS produção)
+- [ ] **M-OPS-01** — Validar `appsettings.Production.json` no servidor (connection strings reais; não commitar)
 
 ---
 
 ## Média prioridade
 
-- [ ] **M-FEAT-01** — Definir escopo do primeiro módulo financeiro (contas, categorias, lançamentos)
+- [ ] **M-OPS-04** — HTTPS: binding 443 + certificado (win-acme) + `App.RequireHttps: true`
+- [ ] **M-ARCH-01** — Entidades `Domain/` adicionais e migrations se necessário (tabelas legadas já mapeadas)
 - [ ] **M-FEAT-02** — Implementar serviços em `Services/` (sem repository genérico)
 
 ---

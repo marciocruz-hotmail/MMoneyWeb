@@ -14,7 +14,7 @@ Contexto técnico **fixo** do **MMoneyWeb** para IA e developers. Detalhe por te
 
 ## Projeto
 
-**MMoneyWeb** — aplicativo web **pessoal** de controle financeiro. Monólito Blazor em fase de fundação; **sem** funcionalidades de negócio implementadas ainda.
+**MMoneyWeb** — aplicativo web **pessoal** de controle financeiro. Monólito Blazor com view **Lançamentos** (grid + modal CRUD) sobre banco legado `mmoneyweb`. Deploy alvo: IIS Windows Server.
 
 **Fonte de verdade:** em conflito entre documentação e código (`MMoneyWeb.Web.csproj`, `Program.cs`, estrutura real), **prevalece o repositório**.
 
@@ -57,15 +57,32 @@ Detalhe: `.cursor/context/2026_06_07_arquitetura-blazor-monolito.md`.
 
 ---
 
+## IIS / produção (resumo)
+
+| Item | Valor |
+|------|--------|
+| Caminho publicação | `C:\inetpub\vhosts\mmoneyweb.com` |
+| Site / pool IIS | `mmoneyweb.com` (pool **sem** CLR v4.0) |
+| Bindings | `mmoneyweb.com` e `www.mmoneyweb.com` (HTTP 80) |
+| Pré-requisito | .NET **10 Hosting Bundle** + WebSocket Protocol |
+| Config produção | `appsettings.Production.json` (gitignored) |
+| Script setup | `scripts/configure-iis-mmoneyweb.ps1` |
+| Histórico deploy | `docs/dev-history/2026-06-07_deploy-iis-mmoneyweb.md` |
+
+`web.config`: `processPath` = caminho completo do `dotnet.exe`; pastas `logs/` e `keys/` com permissão para `IIS AppPool\mmoneyweb.com`.
+
+---
+
 ## Áreas sensíveis
 
 | Área | Nota |
 |------|------|
-| `Program.cs` | DI, pipeline, auth |
-| `Data/` + `Migrations/` | Identity e futuro schema financeiro |
+| `Program.cs` | DI, pipeline, auth, Data Protection (`keys/`), HTTPS opcional |
+| `Data/` + `Migrations/` | Identity e schema financeiro legado |
 | `Components/Account/` | Identity — registro público desativar antes de produção |
 | Connection strings | Nunca commitar credenciais reais; usar env/IIS/User Secrets |
 | `Components/Pages/_Imports.razor` | `[Authorize]` na área principal |
+| `web.config` | Hospedagem IIS (inprocess/outofprocess, stdout) |
 
 ---
 

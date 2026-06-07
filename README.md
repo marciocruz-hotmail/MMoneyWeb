@@ -103,15 +103,48 @@ dotnet test MMoneyWeb.sln
 dotnet publish src\MMoneyWeb.Web\MMoneyWeb.Web.csproj -c Release -o .\publish
 ```
 
+Copie na pasta `publish` o arquivo `appsettings.Production.json` (use `appsettings.Production.example.json` como modelo; não commitar senhas).
+
+**Script de configuracao no servidor (pool, permissoes, web.config, bindings):**
+
+```powershell
+.\scripts\configure-iis-mmoneyweb.ps1
+```
+
+Execute como **Administrator** no EC2, com os arquivos publicados em `C:\inetpub\vhosts\mmoneyweb.com`.
+
+**Importante:** este projeto é **ASP.NET Core (.NET 10)**, não .NET Framework 4.7. Os apps legados no mesmo IIS podem continuar em pools **v4.0**; o MMoneyWeb **precisa de pool e módulo separados**.
+
 **Requisitos no servidor:**
 
 1. IIS habilitado
-2. **.NET 10 Hosting Bundle** instalado
-3. Application Pool configurado como **No Managed Code**
-4. Site IIS apontando para a pasta `publish`
-5. **HTTPS** configurado antes de qualquer acesso externo
+2. Recurso **WebSocket Protocol** instalado (obrigatório para Blazor Server)
+3. **[.NET 10 Hosting Bundle](https://dotnet.microsoft.com/download/dotnet/10.0)** instalado e IIS reiniciado (`iisreset`)
+4. Verificar módulo: deve existir `C:\Program Files\IIS\Asp.Net Core Module\V2\aspnetcorev2.dll`
+5. **Application Pool dedicado** para o MMoneyWeb:
+   - **.NET CLR version:** `No Managed Code` (Sem código gerenciado)
+   - Não reutilizar o pool dos apps .NET Framework 4.7
+6. Site/aplicativo IIS apontando para a pasta `publish` (com `web.config` e `MMoneyWeb.Web.dll`)
+7. Permissão de leitura/execução na pasta para o usuário do pool (ex.: `IIS AppPool\NomeDoPool`)
+8. Pasta `logs` na publicação com permissão de escrita (stdout do `web.config`)
+9. **HTTPS** configurado antes de qualquer acesso externo
 
-Configure as connection strings no IIS (variáveis de ambiente ou `appsettings.Production.json` fora do repositório).
+**Connection strings em produção:** `appsettings.Production.json` na pasta publicada, ou variáveis no IIS (Configuration Editor → `system.webServer/aspNetCore/environmentVariables`).
+
+**Migrations Identity (uma vez no servidor):**
+
+```powershell
+dotnet ef database update --project src\MMoneyWeb.Web --context ApplicationDbContext
+```
+
+**Erros comuns no IIS**
+
+| Sintoma | Causa provável | Ação |
+|--------|----------------|------|
+| HTTP 500.19 — módulo AspNetCoreModuleV2 ausente | Hosting Bundle não instalado | Instalar .NET 10 Hosting Bundle e `iisreset` |
+| HTTP 502.5 — process failure | Connection string inválida ou runtime ausente | Conferir `appsettings.Production.json` e logs em `publish\logs\stdout_*.log` |
+| Página em branco / circuito Blazor cai | WebSocket desabilitado | Instalar **WebSocket Protocol** no IIS |
+| App .NET 4.7 funciona, este não | Pool com CLR v4.0 | Criar pool novo com **No Managed Code** |
 
 ## Segurança — registro público
 
