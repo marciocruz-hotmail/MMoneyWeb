@@ -1,0 +1,28 @@
+<div class="row mb-3">
+    <div class="col-sm-6">
+        <h1 class="mmoney-page-title mb-1">@Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Subtitle))
+        {
+            <p class="text-body-secondary mb-0">@Subtitle</p>
+        }
+    </div>
+    <div class="col-sm-6">
+        @if (Breadcrumb is not null)
+        {
+            <ol class="breadcrumb float-sm-end mb-0">
+                @Breadcrumb
+            </ol>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+
+    [Parameter]
+    public string? Subtitle { get; set; }
+
+    [Parameter]
+    public RenderFragment? Breadcrumb { get; set; }
+}

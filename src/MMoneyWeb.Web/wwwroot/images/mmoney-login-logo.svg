@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" role="img" aria-label="Controle financeiro">
+  <defs>
+    <linearGradient id="mmoneyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0d6efd"/>
+      <stop offset="100%" style="stop-color:#20c997"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="24" width="88" height="72" rx="14" fill="url(#mmoneyGrad)"/>
+  <rect x="22" y="44" width="60" height="10" rx="5" fill="#ffffff" opacity="0.9"/>
+  <circle cx="52" cy="72" r="10" fill="#ffffff" opacity="0.95"/>
+  <path d="M120 88 L120 36 L200 36 L200 88 Z" fill="none" stroke="url(#mmoneyGrad)" stroke-width="8" stroke-linejoin="round"/>
+  <path d="M128 72 L152 52 L176 64 L200 40" fill="none" stroke="#20c997" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="248" cy="48" r="18" fill="#ffc107"/>
+  <circle cx="278" cy="68" r="14" fill="#0d6efd"/>
+  <text x="120" y="108" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#dee2e6">Controle Financeiro</text>
+</svg>

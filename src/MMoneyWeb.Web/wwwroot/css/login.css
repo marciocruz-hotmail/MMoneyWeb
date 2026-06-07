@@ -1,0 +1,119 @@
+/* MMoneyWeb — login estilo GDI /UserIdentity (sem jQuery, sem vendor GDI) */
+
+@import url("https://fonts.googleapis.com/css2?family=Kaushan+Script&display=swap");
+
+html:has(.login-page),
+html:has(.login-page) body {
+    height: 100%;
+    min-height: 100%;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.login-page {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0.76);
+    background-image:
+        linear-gradient(rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.55)),
+        url("../images/login-wallpaper.svg");
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center center;
+}
+
+.login-page-wrap {
+    box-sizing: border-box;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    overflow: hidden;
+}
+
+.login-page .myform {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: min(500px, 92vw);
+    padding: 1.75rem 1.5rem 1.5rem;
+    pointer-events: auto;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 1.1rem;
+    outline: 0;
+    color: #212529;
+}
+
+.login-page .auth-login-logo {
+    max-height: 96px;
+    width: auto;
+    margin: 0 auto;
+}
+
+.login-page .auth-login-title {
+    font-family: "Kaushan Script", cursive;
+    font-size: 2.25rem;
+    font-weight: 400;
+    margin: 0;
+    color: #212529;
+}
+
+.login-page .tx-tfm {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+
+.login-page .mybtn {
+    border-radius: 50px;
+    padding: 0.65rem 1rem;
+}
+
+.login-page .input-group-text {
+    background-color: #f8f9fa;
+    color: #495057;
+}
+
+.login-page .form-control {
+    font-size: 1rem;
+    min-height: calc(2.5rem + 2px);
+}
+
+.login-page .form-control:focus {
+    border-color: #86b7fe;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 0 0.2rem rgba(13, 110, 253, 0.2);
+}
+
+.login-page .validation-message,
+.login-page .text-danger {
+    font-size: 0.875rem;
+}
+
+.login-page a {
+    text-decoration: none !important;
+}
+
+/* Outras páginas Account no mesmo layout de fundo */
+.login-page .auth-panel {
+    width: min(500px, 92vw);
+    padding: 1.75rem 1.5rem;
+    background-color: #fff;
+    color: #212529;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 1.1rem;
+}

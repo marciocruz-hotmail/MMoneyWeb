@@ -1,0 +1,372 @@
+@page "/lancamentos"
+@rendermode InteractiveServer
+
+@using System.Globalization
+@using MMoneyWeb.Web.Domain
+@using MMoneyWeb.Web.Services
+@using MMoneyWeb.Web.Services.Models
+
+@inject LancamentosViewService LancamentosView
+@inject NavigationManager Navigation
+@inject IJSRuntime JsRuntime
+
+<PageTitle>Lançamentos — MMoneyWeb</PageTitle>
+
+<div class="row mmoney-lancamentos-page">
+    <div class="col-lg-12 m-0 p-0">
+        <div class="card m-0 p-0">
+            <div class="card-title m-0 p-1">
+                <h5>Lançamentos</h5>
+            </div>
+
+            <div class="card-header m-0 p-1 d-flex flex-wrap align-items-center gap-1">
+                <button type="button" class="btn btn-outline-success d-inline-flex align-items-center gap-2" @onclick="AbrirNovoAsync" disabled="@carregando">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>Novo
+                </button>
+                <button type="button" class="btn btn-outline-danger d-inline-flex align-items-center gap-2" disabled title="Em breve">
+                    <i class="bi bi-trash" aria-hidden="true"></i>Excluir
+                </button>
+                <div class="vr mx-1 align-self-stretch"></div>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-info dropdown-toggle d-inline-flex align-items-center gap-2" data-bs-toggle="dropdown" aria-expanded="false" disabled title="Em breve">
+                        <i class="bi bi-gear" aria-hidden="true"></i>Processos
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><span class="dropdown-item-text text-muted">Nenhum processo disponível</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="card-body m-0 p-1">
+                <div class="form-horizontal m-0 p-0 mmoney-lancamentos-filtros">
+                    <div class="row text-sm-end m-0 pt-1 align-items-center g-2">
+                        <label class="col-form-label col-sm-2 col-md-1 text-sm-end" for="lookup-conta">Conta</label>
+                        <div class="col-sm-4 col-md-3">
+                            <select id="lookup-conta" class="form-select form-select-sm" @bind="idContaSelecionada" @bind:after="OnFiltroAlteradoAsync">
+                                @foreach (var conta in contas)
+                                {
+                                    <option value="@conta.IdContaCorrente">@conta.Nome</option>
+                                }
+                            </select>
+                        </div>
+                        <label class="col-form-label col-sm-2 col-md-1 text-sm-end" for="lookup-competencia">Competência</label>
+                        <div class="col-sm-4 col-md-3">
+                            <select id="lookup-competencia" class="form-select form-select-sm" @bind="idCompetenciaSelecionada" @bind:after="OnFiltroAlteradoAsync">
+                                @foreach (var competencia in competencias)
+                                {
+                                    <option value="@competencia.IdCompetencia">@competencia.AnoMes</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body m-0 p-1">
+                @if (!string.IsNullOrEmpty(erroCarregamento))
+                {
+                    <div class="alert alert-danger mb-2" role="alert">@erroCarregamento</div>
+                }
+                else if (carregando)
+                {
+                    <div class="text-center py-4 text-body-secondary">
+                        <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+                        Carregando lançamentos...
+                    </div>
+                }
+                else if (linhas.Count == 0)
+                {
+                    <p class="text-body-secondary mb-0 py-3">Nenhum lançamento encontrado para a conta e competência selecionadas.</p>
+                }
+                else
+                {
+                    <div class="mmoney-lancamentos-grid-wrap">
+                        <table class="table table-sm table-hover align-middle w-100 mmoney-lancamentos-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-data">Dt. Venc.</th>
+                                    <th class="col-dc">D/C</th>
+                                    <th class="col-parc">Parc.</th>
+                                    <th>Descrição</th>
+                                    <th class="col-valor col-moeda-th">R$ Valor</th>
+                                    <th class="col-saldo col-moeda-th">Saldo</th>
+                                    <th class="col-acao text-center" title="Editar">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var linha in linhas)
+                                {
+                                    <tr class="@linha.StatusCssClass" @ondblclick="() => AbrirEdicaoAsync(linha.IdLancamento)">
+                                        <td class="col-data">@FormatarData(linha.DataVencimento)</td>
+                                        <td class="col-dc @(linha.IsDebito ? "dc-debito" : "dc-credito")">@linha.DebitoCredito</td>
+                                        <td class="col-parc">@linha.Parcela</td>
+                                        <td>@linha.Descricao</td>
+                                        <td class="col-valor @ObterClasseMoeda(linha.Valor)">@FormatarMoeda(linha.Valor)</td>
+                                        <td class="col-saldo @ObterClasseMoeda(linha.Saldo)">@FormatarMoeda(linha.Saldo)</td>
+                                        <td class="col-acao text-center dt-no-row-select">
+                                            <button type="button"
+                                                    class="btn btn-outline-warning btn-sm p-1 d-inline-flex align-items-center"
+                                                    title="Editar lançamento nº @linha.IdLancamento"
+                                                    @onclick="() => AbrirEdicaoAsync(linha.IdLancamento)"
+                                                    @onclick:stopPropagation="true">
+                                                <i class="bi bi-pencil" aria-hidden="true"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <div class="card-footer">
+                <button type="button" class="btn btn-outline-danger d-inline-flex align-items-center gap-2" @onclick="Sair">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>Sair
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (modalAberto && formModel is not null && lookupsModal is not null)
+{
+    <CreateEditLancamentoModal Form="@formModel"
+                               Lookups="@lookupsModal"
+                               ErroSalvar="@erroModal"
+                               Salvando="@salvandoModal"
+                               OnCancel="FecharModalAsync"
+                               OnSave="SalvarModalAsync" />
+}
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    private readonly List<ContaCorrente> contas = [];
+    private readonly List<Competencia> competencias = [];
+    private readonly List<LancamentoLinhaViewModel> linhas = [];
+
+    private int idContaSelecionada;
+    private int idCompetenciaSelecionada;
+    private bool carregando = true;
+    private bool inicializado;
+    private string? erroCarregamento;
+
+    private bool modalAberto;
+    private bool salvandoModal;
+    private string? erroModal;
+    private LancamentoFormModel? formModel;
+    private LancamentoLookupsModel? lookupsModal;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || inicializado)
+        {
+            return;
+        }
+
+        inicializado = true;
+
+        try
+        {
+            contas.Clear();
+            contas.AddRange(await LancamentosView.ObterContasAtivasAsync());
+
+            competencias.Clear();
+            competencias.AddRange(await LancamentosView.ObterCompetenciasAtivasAsync());
+
+            if (contas.Count == 0 || competencias.Count == 0)
+            {
+                erroCarregamento = "Não há contas correntes ou competências ativas cadastradas.";
+                carregando = false;
+                StateHasChanged();
+                return;
+            }
+
+            var prefs = await ObterPreferenciasAsync();
+            idContaSelecionada = ResolverContaId(prefs.ContaId);
+            idCompetenciaSelecionada = ResolverCompetenciaId(prefs.CompetenciaId);
+
+            await CarregarLancamentosAsync();
+        }
+        catch (Exception ex)
+        {
+            erroCarregamento = $"Erro ao carregar lançamentos: {ex.Message}";
+            carregando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnFiltroAlteradoAsync()
+    {
+        if (idContaSelecionada <= 0 || idCompetenciaSelecionada <= 0)
+        {
+            return;
+        }
+
+        await SalvarPreferenciasAsync(idContaSelecionada, idCompetenciaSelecionada);
+        await CarregarLancamentosAsync();
+    }
+
+    private async Task CarregarLancamentosAsync()
+    {
+        carregando = true;
+        erroCarregamento = null;
+        linhas.Clear();
+        StateHasChanged();
+
+        try
+        {
+            var resultado = await LancamentosView.ObterLancamentosAsync(idContaSelecionada, idCompetenciaSelecionada);
+            linhas.AddRange(resultado);
+            await SalvarPreferenciasAsync(idContaSelecionada, idCompetenciaSelecionada);
+        }
+        catch (Exception ex)
+        {
+            erroCarregamento = $"Erro ao filtrar lançamentos: {ex.Message}";
+        }
+        finally
+        {
+            carregando = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task AbrirNovoAsync()
+    {
+        erroModal = null;
+        lookupsModal = await LancamentosView.ObterLookupsModalAsync();
+        formModel = await LancamentosView.CriarModeloNovoAsync(idContaSelecionada, idCompetenciaSelecionada);
+
+        if (lookupsModal.Categorias.Count > 0)
+        {
+            formModel.IdCategoria = lookupsModal.Categorias[0].IdCategoria;
+        }
+
+        modalAberto = true;
+    }
+
+    private async Task AbrirEdicaoAsync(int idLancamento)
+    {
+        erroModal = null;
+        lookupsModal = await LancamentosView.ObterLookupsModalAsync();
+        formModel = await LancamentosView.ObterLancamentoParaEdicaoAsync(idLancamento);
+
+        if (formModel is null)
+        {
+            erroCarregamento = $"Lançamento {idLancamento} não encontrado.";
+            return;
+        }
+
+        modalAberto = true;
+    }
+
+    private Task FecharModalAsync()
+    {
+        modalAberto = false;
+        erroModal = null;
+        formModel = null;
+        lookupsModal = null;
+        return Task.CompletedTask;
+    }
+
+    private async Task SalvarModalAsync(LancamentoFormModel form)
+    {
+        salvandoModal = true;
+        erroModal = null;
+        StateHasChanged();
+
+        try
+        {
+            await LancamentosView.SalvarLancamentoAsync(form);
+            modalAberto = false;
+            formModel = null;
+            lookupsModal = null;
+            await CarregarLancamentosAsync();
+        }
+        catch (Exception ex)
+        {
+            erroModal = ObterMensagemErro(ex);
+        }
+        finally
+        {
+            salvandoModal = false;
+            StateHasChanged();
+        }
+    }
+
+    private int ResolverContaId(string? preferida)
+    {
+        if (int.TryParse(preferida, out var id) && contas.Any(c => c.IdContaCorrente == id))
+        {
+            return id;
+        }
+
+        return contas[0].IdContaCorrente;
+    }
+
+    private int ResolverCompetenciaId(string? preferida)
+    {
+        if (int.TryParse(preferida, out var id) && competencias.Any(c => c.IdCompetencia == id))
+        {
+            return id;
+        }
+
+        return competencias[0].IdCompetencia;
+    }
+
+    private async Task<(string ContaId, string CompetenciaId)> ObterPreferenciasAsync()
+    {
+        try
+        {
+            var prefs = await JsRuntime.InvokeAsync<LancamentosPrefsDto>("mmoneyLancamentosPrefs.get");
+            return (prefs.ContaId ?? "", prefs.CompetenciaId ?? "");
+        }
+        catch
+        {
+            return ("", "");
+        }
+    }
+
+    private async Task SalvarPreferenciasAsync(int contaId, int competenciaId)
+    {
+        try
+        {
+            await JsRuntime.InvokeVoidAsync("mmoneyLancamentosPrefs.set", contaId.ToString(), competenciaId.ToString());
+        }
+        catch
+        {
+            // Preferência local é auxiliar.
+        }
+    }
+
+    private void Sair() => Navigation.NavigateTo("/");
+
+    private static string FormatarData(DateOnly? data) =>
+        data?.ToString("dd/MM/yy", PtBr) ?? "";
+
+    private static string FormatarMoeda(decimal valor) =>
+        valor.ToString("N2", PtBr);
+
+    private static string ObterClasseMoeda(decimal valor) =>
+        valor < 0 ? "moeda-negativa" : "moeda-positiva";
+
+    private static string ObterMensagemErro(Exception ex)
+    {
+        var mensagem = ex.Message;
+        if (ex.InnerException is not null)
+        {
+            mensagem += $" {ex.InnerException.Message}";
+        }
+
+        return mensagem.Trim();
+    }
+
+    private sealed class LancamentosPrefsDto
+    {
+        public string? ContaId { get; set; }
+        public string? CompetenciaId { get; set; }
+    }
+}

@@ -1,0 +1,213 @@
+@using MMoneyWeb.Web.Services.Models
+
+@if (Form is not null && Lookups is not null)
+{
+    <div class="modal fade show d-block mmoney-lanc-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="lanc-modal-title">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <EditForm Model="Form" OnValidSubmit="ConfirmarAsync" id="ModalCreateEditLancamento">
+                    <DataAnnotationsValidator />
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="lanc-modal-title">@Form.TituloModal</h5>
+                        <button type="button" class="btn-close" aria-label="Fechar" @onclick="CancelarAsync"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (!string.IsNullOrEmpty(ErroSalvar))
+                        {
+                            <div class="alert alert-danger py-2 mb-2" role="alert">@ErroSalvar</div>
+                        }
+
+                        <div class="card shadow-sm mb-0">
+                            <div class="card-body p-2 mmoney-lanc-form">
+                                <div class="row g-1 align-items-center mmoney-lanc-form-row">
+                                    <label class="col-sm-1 col-form-label mmoney-lanc-label mmoney-lanc-label-first">Id.</label>
+                                    <div class="col-sm-2">
+                                        <input type="text" class="form-control" value="@(Form.IsNovo ? "" : Form.IdLancamento.ToString())" readonly />
+                                    </div>
+                                    <div class="col-sm-2">
+                                        <div class="form-check">
+                                            <InputCheckbox @bind-Value="Form.Fixo" class="form-check-input" id="lanc-fixo" />
+                                            <label class="form-check-label mmoney-lanc-label" for="lanc-fixo">Fixo</label>
+                                        </div>
+                                    </div>
+                                    <label class="col-sm-2 col-form-label mmoney-lanc-label text-end">Ordem</label>
+                                    <div class="col-sm-1">
+                                        <InputNumber @bind-Value="Form.Ordem" class="form-control" />
+                                    </div>
+                                    <div class="col-sm-3">
+                                        <div class="form-check">
+                                            <InputCheckbox @bind-Value="Form.DeduzIr" class="form-check-input" id="lanc-deduz-ir" />
+                                            <label class="form-check-label mmoney-lanc-label" for="lanc-deduz-ir">Deduz I.R</label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row g-1 align-items-center mmoney-lanc-form-row">
+                                    <label class="col-sm-1 col-form-label mmoney-lanc-label mmoney-lanc-label-first">Tipo</label>
+                                    <div class="col-sm-4">
+                                        <InputSelect @bind-Value="Form.IdTipo" class="form-select">
+                                            @foreach (var tipo in Lookups.Tipos)
+                                            {
+                                                <option value="@tipo.IdTipo">@tipo.Nome</option>
+                                            }
+                                        </InputSelect>
+                                        <ValidationMessage For="() => Form.IdTipo" class="text-danger small" />
+                                    </div>
+                                    <label class="col-sm-2 col-form-label mmoney-lanc-label text-end">Status</label>
+                                    <div class="col-sm-4">
+                                        <InputSelect @bind-Value="Form.IdStatus" class="form-select">
+                                            @foreach (var status in Lookups.Status)
+                                            {
+                                                <option value="@status.IdStatus">@status.Nome</option>
+                                            }
+                                        </InputSelect>
+                                        <ValidationMessage For="() => Form.IdStatus" class="text-danger small" />
+                                    </div>
+                                </div>
+
+                                <div class="row g-1 align-items-center mmoney-lanc-form-row">
+                                    <label class="col-sm-1 col-form-label mmoney-lanc-label mmoney-lanc-label-first">Comp.</label>
+                                    <div class="col-sm-4">
+                                        <InputSelect @bind-Value="Form.IdCompetencia" class="form-select">
+                                            @foreach (var comp in Lookups.Competencias)
+                                            {
+                                                <option value="@comp.IdCompetencia">@comp.AnoMes</option>
+                                            }
+                                        </InputSelect>
+                                        <ValidationMessage For="() => Form.IdCompetencia" class="text-danger small" />
+                                    </div>
+                                    <label class="col-sm-2 col-form-label mmoney-lanc-label text-end">Categoria</label>
+                                    <div class="col-sm-4">
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+                                            <InputSelect @bind-Value="Form.IdCategoria" class="form-select">
+                                                @foreach (var cat in Lookups.Categorias)
+                                                {
+                                                    <option value="@cat.IdCategoria">@cat.Nome</option>
+                                                }
+                                            </InputSelect>
+                                        </div>
+                                        <ValidationMessage For="() => Form.IdCategoria" class="text-danger small" />
+                                    </div>
+                                </div>
+
+                                <div class="row g-1 align-items-center mmoney-lanc-form-row">
+                                    <label class="col-sm-1 col-form-label mmoney-lanc-label mmoney-lanc-label-first">Dt. Venc.</label>
+                                    <div class="col-sm-4">
+                                        <InputDate @bind-Value="Form.DataVencimento" class="form-control" />
+                                        <ValidationMessage For="() => Form.DataVencimento" class="text-danger small" />
+                                    </div>
+                                    <label class="col-sm-2 col-form-label mmoney-lanc-label text-end">Dt. Pag.</label>
+                                    <div class="col-sm-3">
+                                        <InputDate @bind-Value="Form.DataPagamento" class="form-control" />
+                                    </div>
+                                </div>
+
+                                <div class="row g-1 align-items-center mmoney-lanc-form-row">
+                                    <label class="col-sm-1 col-form-label mmoney-lanc-label mmoney-lanc-label-first">Conta</label>
+                                    <div class="col-sm-4">
+                                        <InputSelect @bind-Value="Form.IdContaCorrente" class="form-select">
+                                            @foreach (var conta in Lookups.Contas)
+                                            {
+                                                <option value="@conta.IdContaCorrente">@conta.Nome</option>
+                                            }
+                                        </InputSelect>
+                                        <ValidationMessage For="() => Form.IdContaCorrente" class="text-danger small" />
+                                    </div>
+                                    <label class="col-sm-2 col-form-label mmoney-lanc-label text-end">Cartão</label>
+                                    <div class="col-sm-4">
+                                        <InputSelect @bind-Value="Form.IdCartaoCredito" class="form-select">
+                                            <option value="0">— Nenhum —</option>
+                                            @foreach (var cartao in Lookups.Cartoes)
+                                            {
+                                                <option value="@cartao.IdCartaoCredito">@cartao.Nome</option>
+                                            }
+                                        </InputSelect>
+                                    </div>
+                                </div>
+
+                                <div class="row g-1 align-items-center mmoney-lanc-form-row">
+                                    <label class="col-sm-1 col-form-label mmoney-lanc-label mmoney-lanc-label-first">Parcela</label>
+                                    <div class="col-sm-2">
+                                        <InputNumber @bind-Value="Form.NumParcelaAtual" class="form-control" />
+                                    </div>
+                                    <label class="col-sm-4 col-form-label mmoney-lanc-label text-end">Qtd. Parcelas</label>
+                                    <div class="col-sm-2">
+                                        <InputNumber @bind-Value="Form.NumParcelaTotal" class="form-control" />
+                                    </div>
+                                </div>
+
+                                <div class="row g-1 align-items-center mmoney-lanc-form-row">
+                                    <label class="col-sm-1 col-form-label mmoney-lanc-label mmoney-lanc-label-first">Descrição</label>
+                                    <div class="col-sm-10">
+                                        <InputText @bind-Value="Form.Descricao" class="form-control" />
+                                        <ValidationMessage For="() => Form.Descricao" class="text-danger small" />
+                                    </div>
+                                </div>
+
+                                <div class="row g-1 align-items-center mmoney-lanc-form-row mb-0">
+                                    <label class="col-sm-1 col-form-label mmoney-lanc-label mmoney-lanc-label-first">R$ Valor</label>
+                                    <div class="col-sm-3">
+                                        <InputNumber @bind-Value="Form.ValorAbsoluto" class="form-control" step="0.01" />
+                                        <ValidationMessage For="() => Form.ValorAbsoluto" class="text-danger small" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer justify-content-between mmoney-lanc-modal-footer">
+                        <button type="button" class="btn btn-warning" @onclick="CancelarAsync" disabled="@Salvando">Cancelar</button>
+                        <button type="submit" class="btn btn-success" disabled="@Salvando">
+                            @if (Salvando)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            }
+                            Confirmar Lançamento
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public LancamentoFormModel Form { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public LancamentoLookupsModel Lookups { get; set; } = default!;
+
+    [Parameter]
+    public string? ErroSalvar { get; set; }
+
+    [Parameter]
+    public bool Salvando { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public EventCallback<LancamentoFormModel> OnSave { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (Form?.IsNovo == true)
+        {
+            Form.DataLancamento = DateOnly.FromDateTime(DateTime.Today);
+        }
+    }
+
+    private Task CancelarAsync() => OnCancel.InvokeAsync();
+
+    private Task ConfirmarAsync()
+    {
+        if (Form.IsNovo)
+        {
+            Form.DataLancamento = DateOnly.FromDateTime(DateTime.Today);
+        }
+
+        return OnSave.InvokeAsync(Form);
+    }
+}
