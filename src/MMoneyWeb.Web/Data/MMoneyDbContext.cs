@@ -44,7 +44,7 @@ public class MMoneyDbContext(DbContextOptions<MMoneyDbContext> options) : DbCont
         {
             entity.ToTable("lancamentos");
             entity.HasKey(e => e.IdLancamento);
-            entity.Property(e => e.IdLancamento).HasColumnName("id_lancamento");
+            entity.Property(e => e.IdLancamento).HasColumnName("id_lancamento").ValueGeneratedOnAdd();
             entity.Property(e => e.Ordem).HasColumnName("ordem");
             entity.Property(e => e.NumParcelaAtual).HasColumnName("num_parcela_atual");
             entity.Property(e => e.NumParcelaTotal).HasColumnName("num_parcela_total");

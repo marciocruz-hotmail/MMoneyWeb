@@ -150,7 +150,7 @@ body.layout-fixed {
     display: none;
     position: fixed;
     inset: 0;
-    z-index: 2000;
+    z-index: 10050;
     align-items: center;
     justify-content: center;
     background: rgba(255, 255, 255, 0.8);
@@ -246,4 +246,19 @@ body.layout-fixed {
 .auth-layout .auth-panel .text-danger,
 .auth-layout .auth-panel .validation-message {
     font-size: 1rem;
+}
+
+/* SweetAlert2 — trace de exceção (LibMessageService) */
+.swal2-html-container .mmoney-swal-trace {
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 60vh;
+    overflow: auto;
+    font-size: 0.8rem;
+    margin: 0;
+    padding: 0.5rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.25rem;
 }

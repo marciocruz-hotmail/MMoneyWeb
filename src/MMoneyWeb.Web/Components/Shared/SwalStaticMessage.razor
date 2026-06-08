@@ -1,0 +1,29 @@
+@if (!string.IsNullOrEmpty(Message))
+{
+    <script>
+        (function () {
+            var kind = @System.Text.Json.JsonSerializer.Serialize(Kind);
+            var msg = @((MarkupString)System.Text.Json.JsonSerializer.Serialize(Message));
+            function show() {
+                if (kind === 'error' && typeof LibMessageError === 'function') {
+                    LibMessageError('Atenção', msg);
+                } else if (typeof LibMessageAlert === 'function') {
+                    LibMessageAlert('Atenção', msg);
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', show);
+            } else {
+                show();
+            }
+        })();
+    </script>
+}
+
+@code {
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public string Kind { get; set; } = "alert";
+}

@@ -74,6 +74,7 @@ var mmoneyConnectionString = builder.Configuration.GetConnectionString("MMoneyCo
 builder.Services.AddDbContextFactory<MMoneyDbContext>(options =>
     options.UseSqlServer(mmoneyConnectionString));
 
+builder.Services.AddScoped<ILibMessageService, LibMessageService>();
 builder.Services.AddScoped<LancamentosViewService>();
 
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();

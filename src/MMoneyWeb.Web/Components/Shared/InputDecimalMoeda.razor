@@ -1,0 +1,79 @@
+@using System.Globalization
+@using System.Text
+@inherits InputBase<decimal>
+
+<input type="text"
+       inputmode="decimal"
+       class="@CssClass"
+       @bind="CurrentValueAsString"
+       @bind:event="onchange"
+       @attributes="AdditionalAttributes" />
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    protected override bool TryParseValueFromString(string? value, out decimal result, out string validationErrorMessage)
+    {
+        if (TryParseMoeda(value, out result))
+        {
+            validationErrorMessage = string.Empty;
+            return true;
+        }
+
+        validationErrorMessage = "Informe um valor numérico válido.";
+        result = 0;
+        return false;
+    }
+
+    protected override string FormatValueAsString(decimal value) =>
+        value == 0m ? string.Empty : NormalizarTextoMoeda(value.ToString("G29", PtBr));
+
+    /// <summary>
+    /// Mantém apenas dígitos e uma vírgula decimal; remove espaços, pontos e demais caracteres.
+    /// </summary>
+    public static string NormalizarTextoMoeda(string? value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        var normalizado = new StringBuilder(value.Length);
+        var virgulaIncluida = false;
+
+        foreach (var caractere in value)
+        {
+            if (char.IsDigit(caractere))
+            {
+                normalizado.Append(caractere);
+                continue;
+            }
+
+            if (caractere == ',' && !virgulaIncluida)
+            {
+                normalizado.Append(',');
+                virgulaIncluida = true;
+            }
+        }
+
+        return normalizado.ToString();
+    }
+
+    public static bool TryParseMoeda(string? value, out decimal result)
+    {
+        result = 0;
+
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return true;
+        }
+
+        var texto = NormalizarTextoMoeda(value);
+        if (string.IsNullOrEmpty(texto))
+        {
+            return false;
+        }
+
+        return decimal.TryParse(texto, NumberStyles.Number, PtBr, out result);
+    }
+}

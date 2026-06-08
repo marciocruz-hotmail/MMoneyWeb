@@ -44,7 +44,7 @@ public sealed class LancamentoFormModel
     public string Descricao { get; set; } = "";
 
     [Required(ErrorMessage = "Informe o valor.")]
-    [Range(typeof(decimal), "0.01", "999999999999", ErrorMessage = "Informe um valor maior que zero.")]
+    [Range(0.01, 999999999999.0, ErrorMessage = "Informe um valor maior que zero.")]
     public decimal ValorAbsoluto { get; set; }
 
     public DateOnly? DataLancamento { get; set; }

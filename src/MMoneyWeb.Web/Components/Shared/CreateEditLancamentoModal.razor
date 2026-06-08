@@ -1,28 +1,33 @@
+@using MMoneyWeb.Web.Services
 @using MMoneyWeb.Web.Services.Models
+@inherits MmoneyComponentBase
 
-@if (Form is not null && Lookups is not null)
+@if (Form is not null && Lookups is not null && formEditContext is not null)
 {
     <div class="modal fade show d-block mmoney-lanc-modal" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="lanc-modal-title">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content">
-                <EditForm Model="Form" OnValidSubmit="ConfirmarAsync" id="ModalCreateEditLancamento">
+                <EditForm EditContext="formEditContext" id="ModalCreateEditLancamento">
                     <DataAnnotationsValidator />
                     <div class="modal-header">
                         <h5 class="modal-title" id="lanc-modal-title">@Form.TituloModal</h5>
                         <button type="button" class="btn-close" aria-label="Fechar" @onclick="CancelarAsync"></button>
                     </div>
                     <div class="modal-body">
-                        @if (!string.IsNullOrEmpty(ErroSalvar))
-                        {
-                            <div class="alert alert-danger py-2 mb-2" role="alert">@ErroSalvar</div>
-                        }
-
                         <div class="card shadow-sm mb-0">
                             <div class="card-body p-2 mmoney-lanc-form">
                                 <div class="row g-1 align-items-center mmoney-lanc-form-row">
                                     <label class="col-sm-1 col-form-label mmoney-lanc-label mmoney-lanc-label-first">Id.</label>
                                     <div class="col-sm-2">
-                                        <input type="text" class="form-control" value="@(Form.IsNovo ? "" : Form.IdLancamento.ToString())" readonly />
+                                        <input type="text"
+                                               class="form-control"
+                                               value="@Form.IdLancamento"
+                                               readonly
+                                               disabled
+                                               tabindex="-1"
+                                               aria-readonly="true"
+                                               aria-disabled="true"
+                                               title="Identificador do lançamento (somente leitura)" />
                                     </div>
                                     <div class="col-sm-2">
                                         <div class="form-check">
@@ -55,7 +60,7 @@
                                     </div>
                                     <label class="col-sm-2 col-form-label mmoney-lanc-label text-end">Status</label>
                                     <div class="col-sm-4">
-                                        <InputSelect @bind-Value="Form.IdStatus" class="form-select">
+                                        <InputSelect @bind-Value="Form.IdStatus" @bind-Value:after="OnStatusAlterado" class="form-select">
                                             @foreach (var status in Lookups.Status)
                                             {
                                                 <option value="@status.IdStatus">@status.Nome</option>
@@ -94,7 +99,9 @@
                                 <div class="row g-1 align-items-center mmoney-lanc-form-row">
                                     <label class="col-sm-1 col-form-label mmoney-lanc-label mmoney-lanc-label-first">Dt. Venc.</label>
                                     <div class="col-sm-4">
-                                        <InputDate @bind-Value="Form.DataVencimento" class="form-control" />
+                                        <InputDate @bind-Value="Form.DataVencimento"
+                                                   @bind-Value:after="OnDataVencimentoAlterada"
+                                                   class="form-control" />
                                         <ValidationMessage For="() => Form.DataVencimento" class="text-danger small" />
                                     </div>
                                     <label class="col-sm-2 col-form-label mmoney-lanc-label text-end">Dt. Pag.</label>
@@ -148,7 +155,7 @@
                                 <div class="row g-1 align-items-center mmoney-lanc-form-row mb-0">
                                     <label class="col-sm-1 col-form-label mmoney-lanc-label mmoney-lanc-label-first">R$ Valor</label>
                                     <div class="col-sm-3">
-                                        <InputNumber @bind-Value="Form.ValorAbsoluto" class="form-control" step="0.01" />
+                                        <InputDecimalMoeda @bind-Value="Form.ValorAbsoluto" class="form-control" />
                                         <ValidationMessage For="() => Form.ValorAbsoluto" class="text-danger small" />
                                     </div>
                                 </div>
@@ -157,7 +164,11 @@
                     </div>
                     <div class="modal-footer justify-content-between mmoney-lanc-modal-footer">
                         <button type="button" class="btn btn-warning" @onclick="CancelarAsync" disabled="@Salvando">Cancelar</button>
-                        <button type="submit" class="btn btn-success" disabled="@Salvando">
+                        <button type="button"
+                                class="btn btn-success"
+                                disabled="@Salvando"
+                                data-mmoney-submit="true"
+                                @onclick="ConfirmarClickAsync">
                             @if (Salvando)
                             {
                                 <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
@@ -180,9 +191,6 @@
     public LancamentoLookupsModel Lookups { get; set; } = default!;
 
     [Parameter]
-    public string? ErroSalvar { get; set; }
-
-    [Parameter]
     public bool Salvando { get; set; }
 
     [Parameter]
@@ -191,23 +199,45 @@
     [Parameter]
     public EventCallback<LancamentoFormModel> OnSave { get; set; }
 
+    private EditContext? formEditContext;
+    private LancamentoFormModel? formEditContextModel;
+
     protected override void OnParametersSet()
     {
-        if (Form?.IsNovo == true)
+        if (!ReferenceEquals(Form, formEditContextModel))
         {
-            Form.DataLancamento = DateOnly.FromDateTime(DateTime.Today);
+            formEditContextModel = Form;
+            formEditContext = new EditContext(Form);
         }
     }
 
-    private Task CancelarAsync() => OnCancel.InvokeAsync();
+    protected Task CancelarAsync() => OnCancel.InvokeAsync();
 
-    private Task ConfirmarAsync()
+    protected void OnStatusAlterado()
     {
-        if (Form.IsNovo)
+        LancamentosServiceBase.UiAccess.AplicarDefaultDataPagamentoNovoLiquidado(Form);
+    }
+
+    protected void OnDataVencimentoAlterada()
+    {
+        LancamentosServiceBase.UiAccess.AplicarDataPagamentoAoAlterarVencimento(Form);
+    }
+
+    protected async Task ConfirmarClickAsync()
+    {
+        if (formEditContext is not null && !formEditContext.Validate())
         {
-            Form.DataLancamento = DateOnly.FromDateTime(DateTime.Today);
+            await ExibirAlertaAsync("Atenção", "Verifique os campos obrigatórios do formulário.");
+            return;
         }
 
-        return OnSave.InvokeAsync(Form);
+        try
+        {
+            await OnSave.InvokeAsync(Form);
+        }
+        catch (Exception ex)
+        {
+            await ExibirErroAsync("Atenção", ex);
+        }
     }
 }

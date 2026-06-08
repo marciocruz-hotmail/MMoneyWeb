@@ -20,8 +20,19 @@
             </div>
 
             <div class="card-header m-0 p-1 d-flex flex-wrap align-items-center gap-1">
-                <button type="button" class="btn btn-outline-success d-inline-flex align-items-center gap-2" @onclick="AbrirNovoAsync" disabled="@carregando">
-                    <i class="bi bi-plus-lg" aria-hidden="true"></i>Novo
+                <button type="button"
+                        class="btn btn-outline-success d-inline-flex align-items-center gap-2"
+                        title="Novo Crédito"
+                        @onclick="AbrirNovoCreditoAsync"
+                        disabled="@carregando">
+                    <i class="bi bi-cash-coin" aria-hidden="true"></i>Novo Crédito
+                </button>
+                <button type="button"
+                        class="btn btn-outline-danger d-inline-flex align-items-center gap-2"
+                        title="Novo Débito"
+                        @onclick="AbrirNovoDebitoAsync"
+                        disabled="@carregando">
+                    <i class="bi bi-cash-stack" aria-hidden="true"></i>Novo Débito
                 </button>
                 <button type="button" class="btn btn-outline-danger d-inline-flex align-items-center gap-2" disabled title="Em breve">
                     <i class="bi bi-trash" aria-hidden="true"></i>Excluir
@@ -63,11 +74,7 @@
             </div>
 
             <div class="card-body m-0 p-1">
-                @if (!string.IsNullOrEmpty(erroCarregamento))
-                {
-                    <div class="alert alert-danger mb-2" role="alert">@erroCarregamento</div>
-                }
-                else if (carregando)
+                @if (carregando)
                 {
                     <div class="text-center py-4 text-body-secondary">
                         <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
@@ -135,7 +142,6 @@
 {
     <CreateEditLancamentoModal Form="@formModel"
                                Lookups="@lookupsModal"
-                               ErroSalvar="@erroModal"
                                Salvando="@salvandoModal"
                                OnCancel="FecharModalAsync"
                                OnSave="SalvarModalAsync" />
@@ -152,16 +158,29 @@
     private int idCompetenciaSelecionada;
     private bool carregando = true;
     private bool inicializado;
-    private string? erroCarregamento;
 
     private bool modalAberto;
     private bool salvandoModal;
-    private string? erroModal;
+    private bool ocultarOverlayModalAposRender;
+    private bool recarregarGridAposSalvar;
     private LancamentoFormModel? formModel;
     private LancamentoLookupsModel? lookupsModal;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (ocultarOverlayModalAposRender)
+        {
+            ocultarOverlayModalAposRender = false;
+            await LibMessages.CarregandoHideAsync();
+        }
+
+        if (recarregarGridAposSalvar)
+        {
+            recarregarGridAposSalvar = false;
+
+            await ExecutarComErroSwalAsync(CarregarLancamentosAsync);
+        }
+
         if (!firstRender || inicializado)
         {
             return;
@@ -169,7 +188,7 @@
 
         inicializado = true;
 
-        try
+        await ExecutarComErroSwalAsync(async () =>
         {
             contas.Clear();
             contas.AddRange(await LancamentosView.ObterContasAtivasAsync());
@@ -179,9 +198,7 @@
 
             if (contas.Count == 0 || competencias.Count == 0)
             {
-                erroCarregamento = "Não há contas correntes ou competências ativas cadastradas.";
-                carregando = false;
-                StateHasChanged();
+                await ExibirAlertaAsync("Atenção", "Não há contas correntes ou competências ativas cadastradas.");
                 return;
             }
 
@@ -190,134 +207,186 @@
             idCompetenciaSelecionada = ResolverCompetenciaId(prefs.CompetenciaId);
 
             await CarregarLancamentosAsync();
-        }
-        catch (Exception ex)
+        });
+
+        if (carregando)
         {
-            erroCarregamento = $"Erro ao carregar lançamentos: {ex.Message}";
             carregando = false;
             StateHasChanged();
         }
     }
 
-    private async Task OnFiltroAlteradoAsync()
+    protected async Task OnFiltroAlteradoAsync()
     {
         if (idContaSelecionada <= 0 || idCompetenciaSelecionada <= 0)
         {
             return;
         }
 
-        await SalvarPreferenciasAsync(idContaSelecionada, idCompetenciaSelecionada);
-        await CarregarLancamentosAsync();
+        await ExecutarComErroSwalAsync(async () =>
+        {
+            await SalvarPreferenciasAsync(idContaSelecionada, idCompetenciaSelecionada);
+            await CarregarLancamentosAsync();
+        });
     }
 
-    private async Task CarregarLancamentosAsync()
+    protected async Task CarregarLancamentosAsync()
     {
         carregando = true;
-        erroCarregamento = null;
         linhas.Clear();
         StateHasChanged();
 
-        try
+        await ExecutarComErroSwalAsync(async () =>
         {
             var resultado = await LancamentosView.ObterLancamentosAsync(idContaSelecionada, idCompetenciaSelecionada);
             linhas.AddRange(resultado);
             await SalvarPreferenciasAsync(idContaSelecionada, idCompetenciaSelecionada);
-        }
-        catch (Exception ex)
+        });
+
+        carregando = false;
+        StateHasChanged();
+    }
+
+    protected async Task AbrirNovoCreditoAsync() =>
+        await AbrirNovoComTipoAsync(LancamentosServiceBase.TipoReceber, "Receitas");
+
+    protected async Task AbrirNovoDebitoAsync() =>
+        await AbrirNovoComTipoAsync(LancamentosServiceBase.TipoPagar, "Despesas");
+
+    private async Task AbrirNovoComTipoAsync(short idTipo, string nomeCategoria)
+    {
+        await AbrirModalLancamentoAsync(async () =>
         {
-            erroCarregamento = $"Erro ao filtrar lançamentos: {ex.Message}";
+            lookupsModal = await LancamentosView.ObterLookupsModalAsync();
+            formModel = await LancamentosView.CriarModeloNovoAsync(idContaSelecionada, idCompetenciaSelecionada);
+            formModel.IdTipo = idTipo;
+            formModel.IdCategoria = ResolverIdCategoriaPorNome(lookupsModal, nomeCategoria);
+
+            modalAberto = true;
+            return true;
+        });
+    }
+
+    private static int ResolverIdCategoriaPorNome(LancamentoLookupsModel lookups, string nomeCategoria)
+    {
+        var categoria = lookups.Categorias.FirstOrDefault(c =>
+            string.Equals(c.Nome?.Trim(), nomeCategoria, StringComparison.OrdinalIgnoreCase));
+
+        if (categoria is not null)
+        {
+            return categoria.IdCategoria;
+        }
+
+        return lookups.Categorias.Count > 0 ? lookups.Categorias[0].IdCategoria : 0;
+    }
+
+    protected async Task AbrirEdicaoAsync(int idLancamento)
+    {
+        await AbrirModalLancamentoAsync(async () =>
+        {
+            lookupsModal = await LancamentosView.ObterLookupsModalAsync();
+            formModel = await LancamentosView.ObterLancamentoParaEdicaoAsync(idLancamento);
+
+            if (formModel is null)
+            {
+                await ExibirAlertaAsync("Atenção", $"Lançamento {idLancamento} não encontrado.");
+                return false;
+            }
+
+            modalAberto = true;
+            return true;
+        });
+    }
+
+    private async Task AbrirModalLancamentoAsync(Func<Task<bool>> prepararModalAsync)
+    {
+        await LibMessages.CarregandoShowAsync("Carregando lançamento . . .");
+        var abrirModal = false;
+
+        try
+        {
+            await ExecutarComErroSwalAsync(async () =>
+            {
+                abrirModal = await prepararModalAsync();
+            });
         }
         finally
         {
-            carregando = false;
-            StateHasChanged();
+            if (abrirModal)
+            {
+                ocultarOverlayModalAposRender = true;
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                await LibMessages.CarregandoHideAsync();
+            }
         }
     }
 
-    private async Task AbrirNovoAsync()
-    {
-        erroModal = null;
-        lookupsModal = await LancamentosView.ObterLookupsModalAsync();
-        formModel = await LancamentosView.CriarModeloNovoAsync(idContaSelecionada, idCompetenciaSelecionada);
-
-        if (lookupsModal.Categorias.Count > 0)
-        {
-            formModel.IdCategoria = lookupsModal.Categorias[0].IdCategoria;
-        }
-
-        modalAberto = true;
-    }
-
-    private async Task AbrirEdicaoAsync(int idLancamento)
-    {
-        erroModal = null;
-        lookupsModal = await LancamentosView.ObterLookupsModalAsync();
-        formModel = await LancamentosView.ObterLancamentoParaEdicaoAsync(idLancamento);
-
-        if (formModel is null)
-        {
-            erroCarregamento = $"Lançamento {idLancamento} não encontrado.";
-            return;
-        }
-
-        modalAberto = true;
-    }
-
-    private Task FecharModalAsync()
+    protected Task FecharModalAsync()
     {
         modalAberto = false;
-        erroModal = null;
         formModel = null;
         lookupsModal = null;
         return Task.CompletedTask;
     }
 
-    private async Task SalvarModalAsync(LancamentoFormModel form)
+    protected async Task SalvarModalAsync(LancamentoFormModel form)
     {
+        if (salvandoModal)
+        {
+            return;
+        }
+
         salvandoModal = true;
-        erroModal = null;
-        StateHasChanged();
+        await InvokeAsync(StateHasChanged);
+
+        await LibMessages.CarregandoShowAsync("Salvando lançamento . . .");
 
         try
         {
             await LancamentosView.SalvarLancamentoAsync(form);
+
             modalAberto = false;
             formModel = null;
             lookupsModal = null;
-            await CarregarLancamentosAsync();
+            salvandoModal = false;
+            recarregarGridAposSalvar = true;
+
+            await LibMessages.CarregandoHideAsync();
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
-            erroModal = ObterMensagemErro(ex);
-        }
-        finally
-        {
             salvandoModal = false;
-            StateHasChanged();
+            await LibMessages.CarregandoHideAsync();
+            await InvokeAsync(StateHasChanged);
+            await ExibirErroAsync("Atenção", ex);
         }
     }
 
-    private int ResolverContaId(string? preferida)
+    protected int ResolverContaId(string? preferida)
     {
         if (int.TryParse(preferida, out var id) && contas.Any(c => c.IdContaCorrente == id))
         {
             return id;
         }
 
-        return contas[0].IdContaCorrente;
+        return contas.Count > 0 ? contas[0].IdContaCorrente : 0;
     }
 
-    private int ResolverCompetenciaId(string? preferida)
+    protected int ResolverCompetenciaId(string? preferida)
     {
         if (int.TryParse(preferida, out var id) && competencias.Any(c => c.IdCompetencia == id))
         {
             return id;
         }
 
-        return competencias[0].IdCompetencia;
+        return competencias.Count > 0 ? competencias[0].IdCompetencia : 0;
     }
 
-    private async Task<(string ContaId, string CompetenciaId)> ObterPreferenciasAsync()
+    protected async Task<(string ContaId, string CompetenciaId)> ObterPreferenciasAsync()
     {
         try
         {
@@ -330,7 +399,7 @@
         }
     }
 
-    private async Task SalvarPreferenciasAsync(int contaId, int competenciaId)
+    protected async Task SalvarPreferenciasAsync(int contaId, int competenciaId)
     {
         try
         {
@@ -342,27 +411,16 @@
         }
     }
 
-    private void Sair() => Navigation.NavigateTo("/");
+    protected void Sair() => Navigation.NavigateTo("/");
 
-    private static string FormatarData(DateOnly? data) =>
+    protected static string FormatarData(DateOnly? data) =>
         data?.ToString("dd/MM/yy", PtBr) ?? "";
 
-    private static string FormatarMoeda(decimal valor) =>
+    protected static string FormatarMoeda(decimal valor) =>
         valor.ToString("N2", PtBr);
 
-    private static string ObterClasseMoeda(decimal valor) =>
+    protected static string ObterClasseMoeda(decimal valor) =>
         valor < 0 ? "moeda-negativa" : "moeda-positiva";
-
-    private static string ObterMensagemErro(Exception ex)
-    {
-        var mensagem = ex.Message;
-        if (ex.InnerException is not null)
-        {
-            mensagem += $" {ex.InnerException.Message}";
-        }
-
-        return mensagem.Trim();
-    }
 
     private sealed class LancamentosPrefsDto
     {

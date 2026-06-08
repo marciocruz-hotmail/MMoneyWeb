@@ -139,12 +139,52 @@
         }
     }
 
+    function initModalKeyboard() {
+        if (window.mmoneyModalKeyboard && typeof window.mmoneyModalKeyboard.initGlobal === 'function') {
+            window.mmoneyModalKeyboard.initGlobal();
+        }
+    }
+
     function init() {
         initLayoutAfterNavigation();
         initLoadingForms();
+        initBlazorErrorSwal();
+        initModalKeyboard();
     }
 
     document.addEventListener('DOMContentLoaded', init);
     window.addEventListener('pageshow', resetLoadingState);
-    document.addEventListener('blazor:enhanced:load', initLayoutAfterNavigation);
+    document.addEventListener('blazor:enhanced:load', function () {
+        initLayoutAfterNavigation();
+        initModalKeyboard();
+    });
+
+    function initBlazorErrorSwal() {
+        var errorUi = document.getElementById('blazor-error-ui');
+        if (!errorUi || typeof LibMessageError !== 'function') {
+            return;
+        }
+
+        var notificado = false;
+
+        function tentarNotificar() {
+            if (notificado) {
+                return;
+            }
+
+            var visivel = window.getComputedStyle(errorUi).display !== 'none';
+            if (!visivel) {
+                return;
+            }
+
+            notificado = true;
+            var trace = 'Ocorreu um erro não tratado no circuito Blazor.\n\nRecarregue a página se o problema persistir.';
+            LibMessageError('Atenção', '<pre class="mmoney-swal-trace">' + trace.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>');
+            errorUi.style.display = 'none';
+        }
+
+        var observer = new MutationObserver(tentarNotificar);
+        observer.observe(errorUi, { attributes: true, attributeFilter: ['style', 'class'] });
+        tentarNotificar();
+    }
 })();

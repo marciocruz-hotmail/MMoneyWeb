@@ -1,0 +1,8 @@
+/**
+ * Overrides globais SweetAlert2 (GDI ERP).
+ * Carregar após sweetalert2.min.css e bootstrap-5.min.css (tema).
+ * Tema: bootstrap-5-light (sempre claro — não segue prefers-color-scheme do SO).
+ */
+.swal2-html-container {
+  text-align: left !important;
+}
