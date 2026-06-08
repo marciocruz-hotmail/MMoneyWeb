@@ -175,6 +175,127 @@ public class LancamentosViewServiceTests
         Assert.Equal(1, form.NumParcelaTotal);
     }
 
+    [Theory]
+    [InlineData(1, 1, 0, false)]
+    [InlineData(4, 4, 0, false)]
+    [InlineData(2, 4, 0, true)]
+    [InlineData(3, 6, 0, true)]
+    [InlineData(0, 0, 1, true)]
+    public void DeveCopiarParaProximaCompetencia_AplicaRegrasDeParcelaEFixo(
+        int parcelaAtual,
+        int parcelaTotal,
+        short fixo,
+        bool esperado)
+    {
+        var lancamento = new Lancamento
+        {
+            NumParcelaAtual = parcelaAtual,
+            NumParcelaTotal = parcelaTotal,
+            Fixo = fixo
+        };
+
+        Assert.Equal(esperado, LancamentosServiceBase.UiAccess.DeveCopiarParaProximaCompetencia(lancamento));
+    }
+
+    [Fact]
+    public void CriarCopiaParaProximaCompetencia_DefineStatusAbertoVencimentoECompetenciaDestino()
+    {
+        var origem = new Lancamento
+        {
+            IdLancamento = 10,
+            NumParcelaAtual = 2,
+            NumParcelaTotal = 4,
+            DataLancamento = new DateOnly(2026, 5, 1),
+            DataVencimento = new DateOnly(2026, 5, 15),
+            DataPagamento = new DateOnly(2026, 5, 15),
+            IdCompetencia = 5,
+            IdContaCorrente = 3,
+            Descricao = "Parcela teste",
+            Valor = -100m,
+            IdCategoria = 2,
+            DeduzIr = 0,
+            Fixo = 0,
+            IdCartaoCredito = null,
+            IdLancamentoPai = null,
+            IdStatus = LancamentosViewService.StatusQuitado,
+            IdTipo = LancamentosViewService.TipoPagar,
+            CodigoBarras = "123",
+            Obs = "obs"
+        };
+
+        var copia = LancamentosServiceBase.UiAccess.CriarCopiaParaProximaCompetencia(
+            origem,
+            idProximaCompetencia: 6,
+            novaDataVencimento: new DateOnly(2026, 6, 15),
+            ordem: 2);
+
+        Assert.Equal(LancamentosViewService.StatusAberto, copia.IdStatus);
+        Assert.Equal(new DateOnly(2026, 6, 15), copia.DataVencimento);
+        Assert.Null(copia.DataPagamento);
+        Assert.Equal(6, copia.IdCompetencia);
+        Assert.Equal(2, copia.Ordem);
+        Assert.Equal((short)1, copia.Copiado);
+        Assert.Equal(origem.IdLancamento, copia.IdLancamentoPai);
+        Assert.Equal(origem.Descricao, copia.Descricao);
+        Assert.Equal(origem.Valor, copia.Valor);
+        Assert.Equal(origem.NumParcelaAtual, copia.NumParcelaAtual);
+        Assert.Equal(origem.NumParcelaTotal, copia.NumParcelaTotal);
+    }
+
+    [Fact]
+    public void AtualizarCopiaParaProximaCompetencia_SincronizaDestinoComOrigemSemAlterarOrdem()
+    {
+        var origem = new Lancamento
+        {
+            IdLancamento = 10,
+            NumParcelaAtual = 3,
+            NumParcelaTotal = 6,
+            DataLancamento = new DateOnly(2026, 5, 1),
+            DataVencimento = new DateOnly(2026, 5, 20),
+            IdCompetencia = 5,
+            IdContaCorrente = 3,
+            Descricao = "Parcela atualizada",
+            Valor = -250m,
+            IdCategoria = 2,
+            IdStatus = LancamentosViewService.StatusQuitado,
+            IdTipo = LancamentosViewService.TipoPagar
+        };
+
+        var destino = new Lancamento
+        {
+            IdLancamento = 99,
+            Ordem = 7,
+            NumParcelaAtual = 2,
+            NumParcelaTotal = 6,
+            DataVencimento = new DateOnly(2026, 6, 10),
+            DataPagamento = new DateOnly(2026, 6, 10),
+            IdCompetencia = 6,
+            IdContaCorrente = 3,
+            Descricao = "Antigo",
+            Valor = -100m,
+            Copiado = 1,
+            IdLancamentoPai = 10,
+            IdStatus = LancamentosViewService.StatusQuitado
+        };
+
+        LancamentosServiceBase.UiAccess.AtualizarCopiaParaProximaCompetencia(
+            destino,
+            origem,
+            idProximaCompetencia: 6,
+            novaDataVencimento: new DateOnly(2026, 6, 20));
+
+        Assert.Equal(7, destino.Ordem);
+        Assert.Equal(99, destino.IdLancamento);
+        Assert.Equal(origem.IdLancamento, destino.IdLancamentoPai);
+        Assert.Equal((short)1, destino.Copiado);
+        Assert.Equal(LancamentosViewService.StatusAberto, destino.IdStatus);
+        Assert.Equal(new DateOnly(2026, 6, 20), destino.DataVencimento);
+        Assert.Null(destino.DataPagamento);
+        Assert.Equal("Parcela atualizada", destino.Descricao);
+        Assert.Equal(-250m, destino.Valor);
+        Assert.Equal(3, destino.NumParcelaAtual);
+    }
+
     [Fact]
     public void MontarLinhasComSaldo_CalculaSaldoAcumuladoNaLinhaDoTempo()
     {

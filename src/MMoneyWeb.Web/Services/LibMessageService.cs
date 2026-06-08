@@ -6,6 +6,7 @@ namespace MMoneyWeb.Web.Services;
 public interface ILibMessageService
 {
     Task AlertAsync(string title, string message, CancellationToken cancellationToken = default);
+    Task<bool> ConfirmAsync(string title, string message, CancellationToken cancellationToken = default);
     Task SuccessAsync(string title, string message, CancellationToken cancellationToken = default);
     Task ErrorAsync(string title, string message, CancellationToken cancellationToken = default);
     Task ErrorAsync(string title, Exception exception, CancellationToken cancellationToken = default);
@@ -20,6 +21,9 @@ public sealed class LibMessageService(IJSRuntime jsRuntime) : ILibMessageService
 {
     public Task AlertAsync(string title, string message, CancellationToken cancellationToken = default) =>
         InvokeAsync("LibMessageAlert", title, message, cancellationToken);
+
+    public Task<bool> ConfirmAsync(string title, string message, CancellationToken cancellationToken = default) =>
+        jsRuntime.InvokeAsync<bool>("LibMessageConfirm", cancellationToken, title, message).AsTask();
 
     public Task SuccessAsync(string title, string message, CancellationToken cancellationToken = default) =>
         InvokeAsync("LibMessageSuccess", title, message, cancellationToken);

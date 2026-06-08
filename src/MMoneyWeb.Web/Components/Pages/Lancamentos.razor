@@ -34,17 +34,51 @@
                         disabled="@carregando">
                     <i class="bi bi-cash-stack" aria-hidden="true"></i>Novo Débito
                 </button>
-                <button type="button" class="btn btn-outline-danger d-inline-flex align-items-center gap-2" disabled title="Em breve">
+                <button type="button"
+                        class="btn btn-outline-danger d-inline-flex align-items-center gap-2"
+                        title="Excluir lançamentos selecionados"
+                        @onclick="ExcluirSelecionadosAsync"
+                        disabled="@(carregando || excluindo)">
                     <i class="bi bi-trash" aria-hidden="true"></i>Excluir
                 </button>
                 <div class="vr mx-1 align-self-stretch"></div>
                 <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-outline-info dropdown-toggle d-inline-flex align-items-center gap-2" data-bs-toggle="dropdown" aria-expanded="false" disabled title="Em breve">
+                    <button type="button"
+                            class="btn btn-outline-info dropdown-toggle d-inline-flex align-items-center gap-2"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            disabled="@(carregando || copiando)"
+                            title="Processos em lote">
                         <i class="bi bi-gear" aria-hidden="true"></i>Processos
                     </button>
                     <ul class="dropdown-menu">
-                        <li><span class="dropdown-item-text text-muted">Nenhum processo disponível</span></li>
+                        <li>
+                            <button type="button"
+                                    class="dropdown-item"
+                                    @onclick="CopiarLancamentosProximaCompetenciaAsync"
+                                    disabled="@(carregando || copiando)">
+                                Copiar lançamentos próx. comp.
+                            </button>
+                        </li>
                     </ul>
+                </div>
+                <div class="mmoney-lancamentos-totais d-flex flex-wrap align-items-stretch gap-1 ms-1">
+                    <div class="mmoney-lanc-total-box mmoney-lanc-total-credito" title="Total de créditos filtrados">
+                        <span class="mmoney-lanc-total-label">Créditos</span>
+                        <span class="mmoney-lanc-total-valor">@FormatarMoeda(TotalCreditoFiltrado)</span>
+                    </div>
+                    <div class="mmoney-lanc-total-box mmoney-lanc-total-debito" title="Total de débitos filtrados">
+                        <span class="mmoney-lanc-total-label">Débitos</span>
+                        <span class="mmoney-lanc-total-valor">@FormatarMoeda(TotalDebitoFiltrado)</span>
+                    </div>
+                    <div class="mmoney-lanc-total-box mmoney-lanc-total-saldo" title="Créditos menos débitos">
+                        <span class="mmoney-lanc-total-label">Saldo</span>
+                        <span class="mmoney-lanc-total-valor @ObterClasseSaldoCreditoDebito(SaldoCreditoMenosDebito)">@FormatarMoeda(SaldoCreditoMenosDebito)</span>
+                    </div>
+                    <div class="mmoney-lanc-total-box mmoney-lanc-total-totalizador" title="Soma dos lançamentos selecionados (a receber menos a pagar)">
+                        <span class="mmoney-lanc-total-label">Totalizador</span>
+                        <span class="mmoney-lanc-total-valor @ObterClasseTotalizadorSelecionado(TotalizadorSelecionado)">@FormatarMoeda(TotalizadorSelecionado)</span>
+                    </div>
                 </div>
             </div>
 
@@ -91,6 +125,9 @@
                         <table class="table table-sm table-hover align-middle w-100 mmoney-lancamentos-table">
                             <thead>
                                 <tr>
+                                    <th class="col-selecao text-center" title="Selecionar">
+                                        <span class="visually-hidden">Selecionar</span>
+                                    </th>
                                     <th class="col-data">Dt. Venc.</th>
                                     <th class="col-dc">D/C</th>
                                     <th class="col-parc">Parc.</th>
@@ -105,7 +142,17 @@
                             <tbody>
                                 @foreach (var linha in linhas)
                                 {
-                                    <tr class="@linha.StatusCssClass" @ondblclick="() => AbrirEdicaoAsync(linha.IdLancamento)">
+                                    <tr class="@ObterClasseLinha(linha)"
+                                        @onclick="() => AlternarSelecaoLinhaAsync(linha.IdLancamento)"
+                                        @ondblclick="() => AbrirEdicaoAsync(linha.IdLancamento)">
+                                        <td class="col-selecao text-center dt-no-row-select">
+                                            <input type="checkbox"
+                                                   class="form-check-input m-0"
+                                                   checked="@idsSelecionados.Contains(linha.IdLancamento)"
+                                                   aria-label="Selecionar lançamento nº @linha.IdLancamento"
+                                                   @onchange="e => AlternarSelecaoAsync(linha.IdLancamento, e)"
+                                                   @onclick:stopPropagation="true" />
+                                        </td>
                                         <td class="col-data">@FormatarData(linha.DataVencimento)</td>
                                         <td class="col-dc @(linha.IsDebito ? "dc-debito" : "dc-credito")">@linha.DebitoCredito</td>
                                         <td class="col-parc">@linha.Parcela</td>
@@ -153,11 +200,26 @@
     private readonly List<ContaCorrente> contas = [];
     private readonly List<Competencia> competencias = [];
     private readonly List<LancamentoLinhaViewModel> linhas = [];
+    private readonly HashSet<int> idsSelecionados = [];
 
     private int idContaSelecionada;
     private int idCompetenciaSelecionada;
     private bool carregando = true;
+    private bool excluindo;
+    private bool copiando;
     private bool inicializado;
+
+    private decimal TotalCreditoFiltrado =>
+        linhas.Where(l => !l.IsDebito).Sum(l => l.Valor);
+
+    private decimal TotalDebitoFiltrado =>
+        linhas.Where(l => l.IsDebito).Sum(l => Math.Abs(l.Valor));
+
+    private decimal SaldoCreditoMenosDebito =>
+        TotalCreditoFiltrado - TotalDebitoFiltrado;
+
+    private decimal TotalizadorSelecionado =>
+        linhas.Where(l => idsSelecionados.Contains(l.IdLancamento)).Sum(l => l.Valor);
 
     private bool modalAberto;
     private bool salvandoModal;
@@ -234,6 +296,7 @@
     {
         carregando = true;
         linhas.Clear();
+        idsSelecionados.Clear();
         StateHasChanged();
 
         await ExecutarComErroSwalAsync(async () =>
@@ -245,6 +308,129 @@
 
         carregando = false;
         StateHasChanged();
+    }
+
+    protected Task AlternarSelecaoLinhaAsync(int idLancamento)
+    {
+        if (idsSelecionados.Contains(idLancamento))
+        {
+            idsSelecionados.Remove(idLancamento);
+        }
+        else
+        {
+            idsSelecionados.Add(idLancamento);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    protected Task AlternarSelecaoAsync(int idLancamento, ChangeEventArgs e)
+    {
+        if (e.Value is bool selecionado)
+        {
+            if (selecionado)
+            {
+                idsSelecionados.Add(idLancamento);
+            }
+            else
+            {
+                idsSelecionados.Remove(idLancamento);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    protected string ObterClasseLinha(LancamentoLinhaViewModel linha)
+    {
+        var classes = linha.StatusCssClass;
+
+        if (idsSelecionados.Contains(linha.IdLancamento))
+        {
+            classes += " mmoney-lanc-row-selecionada";
+        }
+
+        return classes;
+    }
+
+    protected async Task CopiarLancamentosProximaCompetenciaAsync()
+    {
+        if (idContaSelecionada <= 0 || idCompetenciaSelecionada <= 0)
+        {
+            return;
+        }
+
+        copiando = true;
+        await InvokeAsync(StateHasChanged);
+
+        CopiarLancamentosProximaCompetenciaResult? resultado = null;
+
+        try
+        {
+            await ExecutarComProcessandoAsync(async () =>
+            {
+                resultado = await LancamentosView.CopiarLancamentosProximaCompetenciaAsync(
+                    idContaSelecionada,
+                    idCompetenciaSelecionada);
+            }, "Copiando lançamentos para a próxima competência . . .");
+        }
+        finally
+        {
+            copiando = false;
+            await InvokeAsync(StateHasChanged);
+        }
+
+        if (resultado is null)
+        {
+            return;
+        }
+
+        var mensagem =
+            $"Competência destino: {resultado.ProximaCompetenciaAnoMes}.<br>" +
+            $"{resultado.QuantidadeCopiada} lançamento(s) copiado(s).<br>" +
+            $"{resultado.QuantidadeAtualizada} lançamento(s) atualizado(s).<br>" +
+            $"{resultado.QuantidadeIgnorada} lançamento(s) não copiado(s).";
+
+        if (resultado.QuantidadeCopiada == 0 && resultado.QuantidadeAtualizada == 0)
+        {
+            await ExibirAlertaAsync("Atenção", mensagem);
+            return;
+        }
+
+        await ExibirSucessoAsync("Concluído", mensagem);
+    }
+
+    protected async Task ExcluirSelecionadosAsync()
+    {
+        if (idsSelecionados.Count == 0)
+        {
+            await ExibirAlertaAsync("Atenção", "Selecione um ou mais lançamentos para excluir.");
+            return;
+        }
+
+        var quantidade = idsSelecionados.Count;
+        var mensagem = quantidade == 1
+            ? "Deseja realmente excluir o lançamento selecionado?"
+            : $"Deseja realmente excluir os {quantidade} lançamentos selecionados?";
+
+        if (!await ConfirmarAsync("Confirmação", mensagem))
+        {
+            return;
+        }
+
+        excluindo = true;
+        await InvokeAsync(StateHasChanged);
+
+        await ExecutarComProcessandoAsync(async () =>
+        {
+            var ids = idsSelecionados.ToArray();
+            await LancamentosView.ExcluirLancamentosAsync(ids);
+            idsSelecionados.Clear();
+            await CarregarLancamentosAsync();
+        }, "Excluindo lançamentos . . .");
+
+        excluindo = false;
+        await InvokeAsync(StateHasChanged);
     }
 
     protected async Task AbrirNovoCreditoAsync() =>
@@ -421,6 +607,12 @@
 
     protected static string ObterClasseMoeda(decimal valor) =>
         valor < 0 ? "moeda-negativa" : "moeda-positiva";
+
+    protected static string ObterClasseSaldoCreditoDebito(decimal saldo) =>
+        saldo < 0 ? "mmoney-lanc-saldo-negativo" : "mmoney-lanc-saldo-positivo";
+
+    protected static string ObterClasseTotalizadorSelecionado(decimal total) =>
+        total < 0 ? "mmoney-lanc-totalizador-negativo" : "mmoney-lanc-totalizador-positivo";
 
     private sealed class LancamentosPrefsDto
     {

@@ -124,6 +124,233 @@ public abstract class LancamentosServiceBase(IDbContextFactory<MMoneyDbContext> 
         return form;
     }
 
+    public Task<CopiarLancamentosProximaCompetenciaResult> CopiarLancamentosProximaCompetenciaAsync(
+        int idContaCorrente,
+        int idCompetenciaAtual,
+        CancellationToken cancellationToken = default) =>
+        CopiarLancamentosProximaCompetenciaCoreAsync(idContaCorrente, idCompetenciaAtual, cancellationToken);
+
+    protected async Task<CopiarLancamentosProximaCompetenciaResult> CopiarLancamentosProximaCompetenciaCoreAsync(
+        int idContaCorrente,
+        int idCompetenciaAtual,
+        CancellationToken cancellationToken)
+    {
+        await using var db = await DbContextFactory.CreateDbContextAsync(cancellationToken);
+
+        var proximaCompetencia = await ObterProximaCompetenciaAtivaCoreAsync(db, idCompetenciaAtual, cancellationToken)
+            ?? throw new InvalidOperationException("Não há competência ativa seguinte à competência atual.");
+
+        var lancamentos = await db.Lancamentos
+            .Where(l => l.IdContaCorrente == idContaCorrente && l.IdCompetencia == idCompetenciaAtual)
+            .OrderByDescending(l => l.IdStatus)
+            .ThenBy(l => l.DataVencimento)
+            .ThenBy(l => l.Ordem)
+            .ToListAsync(cancellationToken);
+
+        var copiasExistentes = await db.Lancamentos
+            .Where(l =>
+                l.IdContaCorrente == idContaCorrente &&
+                l.IdCompetencia == proximaCompetencia.IdCompetencia &&
+                l.IdLancamentoPai != null)
+            .ToListAsync(cancellationToken);
+
+        var copiasPorPai = copiasExistentes
+            .GroupBy(l => l.IdLancamentoPai!.Value)
+            .ToDictionary(g => g.Key, g => g.First());
+
+        var copiados = 0;
+        var atualizados = 0;
+        var ignorados = 0;
+        var alterado = false;
+
+        foreach (var origem in lancamentos)
+        {
+            if (!DeveCopiarParaProximaCompetencia(origem))
+            {
+                ignorados++;
+                continue;
+            }
+
+            if (!origem.DataVencimento.HasValue)
+            {
+                ignorados++;
+                continue;
+            }
+
+            var novaDataVencimento = origem.DataVencimento.Value.AddMonths(1);
+
+            if (copiasPorPai.TryGetValue(origem.IdLancamento, out var destinoExistente))
+            {
+                AtualizarCopiaParaProximaCompetencia(
+                    destinoExistente,
+                    origem,
+                    proximaCompetencia.IdCompetencia,
+                    novaDataVencimento);
+
+                atualizados++;
+                alterado = true;
+                continue;
+            }
+
+            var ordem = await ObterProximaOrdemCoreAsync(
+                db,
+                idContaCorrente,
+                proximaCompetencia.IdCompetencia,
+                novaDataVencimento,
+                cancellationToken);
+
+            var novoDestino = CriarCopiaParaProximaCompetencia(
+                origem,
+                proximaCompetencia.IdCompetencia,
+                novaDataVencimento,
+                ordem);
+
+            db.Lancamentos.Add(novoDestino);
+            copiasPorPai[origem.IdLancamento] = novoDestino;
+
+            copiados++;
+            alterado = true;
+        }
+
+        if (alterado)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return new CopiarLancamentosProximaCompetenciaResult
+        {
+            QuantidadeCopiada = copiados,
+            QuantidadeAtualizada = atualizados,
+            QuantidadeIgnorada = ignorados,
+            ProximaCompetenciaAnoMes = proximaCompetencia.AnoMes
+        };
+    }
+
+    protected static async Task<Competencia?> ObterProximaCompetenciaAtivaCoreAsync(
+        MMoneyDbContext db,
+        int idCompetenciaAtual,
+        CancellationToken cancellationToken)
+    {
+        var competencias = await db.Competencias
+            .AsNoTracking()
+            .Where(c => c.Ativo == 1)
+            .OrderBy(c => c.AnoMes)
+            .ToListAsync(cancellationToken);
+
+        var indiceAtual = competencias.FindIndex(c => c.IdCompetencia == idCompetenciaAtual);
+        if (indiceAtual < 0 || indiceAtual >= competencias.Count - 1)
+        {
+            return null;
+        }
+
+        return competencias[indiceAtual + 1];
+    }
+
+    protected static bool DeveCopiarParaProximaCompetencia(Lancamento lancamento)
+    {
+        if (lancamento.Fixo == 1)
+        {
+            return true;
+        }
+
+        var parcelaAtual = lancamento.NumParcelaAtual ?? 0;
+        var parcelaTotal = lancamento.NumParcelaTotal ?? 0;
+
+        if (parcelaAtual <= 0 || parcelaTotal <= 0)
+        {
+            return false;
+        }
+
+        if (parcelaAtual == 1 && parcelaTotal == 1)
+        {
+            return false;
+        }
+
+        if (parcelaAtual >= parcelaTotal)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    protected static Lancamento CriarCopiaParaProximaCompetencia(
+        Lancamento origem,
+        int idProximaCompetencia,
+        DateOnly novaDataVencimento,
+        int ordem)
+    {
+        var destino = new Lancamento();
+        AplicarDadosCopiaParaProximaCompetencia(destino, origem, idProximaCompetencia, novaDataVencimento, ordem);
+        return destino;
+    }
+
+    protected static void AtualizarCopiaParaProximaCompetencia(
+        Lancamento destino,
+        Lancamento origem,
+        int idProximaCompetencia,
+        DateOnly novaDataVencimento) =>
+        AplicarDadosCopiaParaProximaCompetencia(destino, origem, idProximaCompetencia, novaDataVencimento);
+
+    protected static void AplicarDadosCopiaParaProximaCompetencia(
+        Lancamento destino,
+        Lancamento origem,
+        int idProximaCompetencia,
+        DateOnly novaDataVencimento,
+        int? ordem = null)
+    {
+        if (ordem.HasValue)
+        {
+            destino.Ordem = ordem.Value;
+        }
+
+        destino.NumParcelaAtual = origem.NumParcelaAtual;
+        destino.NumParcelaTotal = origem.NumParcelaTotal;
+        destino.DataLancamento = origem.DataLancamento;
+        destino.DataVencimento = novaDataVencimento;
+        destino.DataPagamento = null;
+        destino.IdCompetencia = idProximaCompetencia;
+        destino.IdContaCorrente = origem.IdContaCorrente;
+        destino.Descricao = origem.Descricao;
+        destino.Valor = origem.Valor;
+        destino.IdCategoria = origem.IdCategoria;
+        destino.DeduzIr = origem.DeduzIr;
+        destino.Fixo = origem.Fixo;
+        destino.IdCartaoCredito = origem.IdCartaoCredito;
+        destino.SaldoAtual = null;
+        destino.Copiado = 1;
+        destino.IdLancamentoPai = origem.IdLancamento;
+        destino.IdStatus = StatusAberto;
+        destino.IdTipo = origem.IdTipo;
+        destino.CodigoBarras = origem.CodigoBarras;
+        destino.Obs = origem.Obs;
+    }
+
+    public Task<int> ExcluirLancamentosAsync(IReadOnlyCollection<int> idsLancamentos, CancellationToken cancellationToken = default) =>
+        ExcluirLancamentosCoreAsync(idsLancamentos, cancellationToken);
+
+    protected async Task<int> ExcluirLancamentosCoreAsync(IReadOnlyCollection<int> idsLancamentos, CancellationToken cancellationToken)
+    {
+        if (idsLancamentos.Count == 0)
+        {
+            return 0;
+        }
+
+        await using var db = await DbContextFactory.CreateDbContextAsync(cancellationToken);
+        var lancamentos = await db.Lancamentos
+            .Where(l => idsLancamentos.Contains(l.IdLancamento))
+            .ToListAsync(cancellationToken);
+
+        if (lancamentos.Count == 0)
+        {
+            return 0;
+        }
+
+        db.Lancamentos.RemoveRange(lancamentos);
+        await db.SaveChangesAsync(cancellationToken);
+        return lancamentos.Count;
+    }
+
     public Task<int> SalvarLancamentoAsync(LancamentoFormModel form, CancellationToken cancellationToken = default) =>
         SalvarLancamentoCoreAsync(form, cancellationToken);
 
@@ -406,5 +633,30 @@ public abstract class LancamentosServiceBase(IDbContextFactory<MMoneyDbContext> 
 
         public static int CalcularProximaOrdem(int? maxOrdemExistente) =>
             LancamentosServiceBase.CalcularProximaOrdemCore(maxOrdemExistente);
+
+        public static bool DeveCopiarParaProximaCompetencia(Lancamento lancamento) =>
+            LancamentosServiceBase.DeveCopiarParaProximaCompetencia(lancamento);
+
+        public static Lancamento CriarCopiaParaProximaCompetencia(
+            Lancamento origem,
+            int idProximaCompetencia,
+            DateOnly novaDataVencimento,
+            int ordem) =>
+            LancamentosServiceBase.CriarCopiaParaProximaCompetencia(
+                origem,
+                idProximaCompetencia,
+                novaDataVencimento,
+                ordem);
+
+        public static void AtualizarCopiaParaProximaCompetencia(
+            Lancamento destino,
+            Lancamento origem,
+            int idProximaCompetencia,
+            DateOnly novaDataVencimento) =>
+            LancamentosServiceBase.AtualizarCopiaParaProximaCompetencia(
+                destino,
+                origem,
+                idProximaCompetencia,
+                novaDataVencimento);
     }
 }

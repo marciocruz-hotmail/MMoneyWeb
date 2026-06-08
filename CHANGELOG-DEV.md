@@ -31,6 +31,31 @@ Monólito **ASP.NET Core Blazor Web App** (.NET 10, Interactive Server) com **AS
 
 ## Últimas alterações relevantes
 
+### 2026-06-08 — Lançamentos: cor do box Saldo (verde/vermelho)
+- Valor do Saldo no header: verde se positivo, vermelho se negativo (alinhado ao Totalizador).
+
+### 2026-06-08 — Lançamentos: box Totalizador (seleção) no header
+- Box amarelo ao lado do Saldo: soma dinâmica dos lançamentos marcados (crédito − débito); verde/vermelho conforme sinal; sem persistência.
+
+### 2026-06-08 — Lançamentos: boxes totais crédito/débito/saldo no header
+- Três indicadores após **Processos**: créditos (verde), débitos (vermelho) e saldo crédito−débito (cinza; azul/vermelho conforme sinal), calculados dos lançamentos filtrados.
+
+### 2026-06-08 — Lançamentos: cópia próx. competência idempotente
+- Antes de inserir, verifica destino por `id_lancamento_pai`; se existir, atualiza em vez de duplicar. Resumo final: copiados, atualizados e não copiados.
+
+### 2026-06-08 — Lançamentos: ajuste cópia próx. competência (pai + copiado)
+- Destino da cópia: `copiado = 1` e `id_lancamento_pai` = `id_lancamento` da origem.
+
+### 2026-06-08 — Lançamentos: processo copiar para próxima competência
+- Menu **Processos** → «Copiar lançamentos próx. comp.»: copia fixos e parcelados elegíveis (exclui 1/1 e última parcela) para a competência seguinte; status aberto, vencimento +1 mês; ignora seleção da grid.
+
+### 2026-06-08 — Lançamentos: clique na linha alterna seleção
+- Clique único na linha da grid marca/desmarca o checkbox; destaque visual `mmoney-lanc-row-selecionada`. Duplo clique mantém abertura do modal de edição.
+
+### 2026-06-08 — Lançamentos: seleção e exclusão em lote
+- Coluna de checkbox na grid; botão **Excluir** com validação de seleção, confirmação SweetAlert2 e refresh da tabela.
+- `LancamentosServiceBase.ExcluirLancamentosAsync`; `ILibMessageService.ConfirmAsync` + `LibMessageConfirm` (JS).
+
 ### 2026-06-08 — Deploy Coolify Linux
 - `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `.env.example`.
 - `Program.cs`: `/health`, Forwarded Headers (proxy Traefik), migrations opcionais (`Database:RunMigrationsOnStartup`), `DataProtection:KeysPath`.

@@ -36,6 +36,27 @@
     _gdiSwalAlert('error', title, msg, cfg);
   };
 
+  window.LibMessageConfirm = function (title, msg) {
+    return new Promise(function (resolve) {
+      try {
+        if (typeof GdiSwalCompat !== 'undefined' && GdiSwalCompat && typeof GdiSwalCompat.confirm === 'function') {
+          GdiSwalCompat.confirm({
+            title: title || 'Confirmação',
+            message: msg || '',
+            callback: function (confirmed) {
+              resolve(!!confirmed);
+            }
+          });
+          return;
+        }
+        resolve(confirm((title ? title + '\n\n' : '') + (msg || '')));
+      } catch (err) {
+        alert('[LibMessageConfirm] ' + (err && err.message ? err.message.toString() : String(err)));
+        resolve(false);
+      }
+    });
+  };
+
   window.LibMessageHideAll = function () {
     try {
       if (typeof GdiSwalCompat !== 'undefined' && GdiSwalCompat && typeof GdiSwalCompat.hideAll === 'function') {

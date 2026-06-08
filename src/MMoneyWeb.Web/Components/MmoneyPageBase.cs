@@ -71,6 +71,9 @@ public abstract class MmoneyPageBase : ComponentBase
     protected Task ExibirAlertaAsync(string titulo, string mensagem) =>
         LibMessages.AlertAsync(titulo, mensagem);
 
+    protected Task<bool> ConfirmarAsync(string titulo, string mensagem) =>
+        LibMessages.ConfirmAsync(titulo, mensagem);
+
     protected Task ExibirSucessoAsync(string titulo, string mensagem) =>
         LibMessages.SuccessAsync(titulo, mensagem);
 }
