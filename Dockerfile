@@ -4,13 +4,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY MMoneyWeb.sln ./
 COPY src/MMoneyWeb.Web/MMoneyWeb.Web.csproj src/MMoneyWeb.Web/
-COPY tests/MMoneyWeb.Tests/MMoneyWeb.Tests.csproj tests/MMoneyWeb.Tests/
+RUN dotnet restore src/MMoneyWeb.Web/MMoneyWeb.Web.csproj
 
-RUN dotnet restore MMoneyWeb.sln
-
-COPY src/ src/
+COPY src/MMoneyWeb.Web/ src/MMoneyWeb.Web/
 RUN dotnet publish src/MMoneyWeb.Web/MMoneyWeb.Web.csproj \
     -c Release \
     -o /app/publish \
