@@ -10,10 +10,11 @@ using MMoneyWeb.Web.Services;
 
 Console.WriteLine($"[startup] MMoneyWeb PID={Environment.ProcessId}");
 
-// Coolify e outros hosts podem injetar PORT; alinhar com ASPNETCORE_URLS.
-var port = Environment.GetEnvironmentVariable("PORT");
-if (!string.IsNullOrWhiteSpace(port))
+// Coolify pode injetar PORT=3000 por defeito; ASPNETCORE_URLS do Dockerfile (8080) tem prioridade.
+var aspnetUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+if (string.IsNullOrWhiteSpace(aspnetUrls))
 {
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
     Environment.SetEnvironmentVariable("ASPNETCORE_URLS", $"http://+:{port}");
 }
 
