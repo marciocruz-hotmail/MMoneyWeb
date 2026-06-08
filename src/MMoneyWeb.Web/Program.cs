@@ -8,6 +8,8 @@ using MMoneyWeb.Web.Components.Account;
 using MMoneyWeb.Web.Data;
 using MMoneyWeb.Web.Services;
 
+Console.WriteLine($"[startup] MMoneyWeb PID={Environment.ProcessId}");
+
 // Coolify e outros hosts podem injetar PORT; alinhar com ASPNETCORE_URLS.
 var port = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrWhiteSpace(port))
@@ -24,7 +26,17 @@ if (string.IsNullOrWhiteSpace(dataProtectionKeysPath))
     dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "keys");
 }
 
-Directory.CreateDirectory(dataProtectionKeysPath);
+try
+{
+    Directory.CreateDirectory(dataProtectionKeysPath);
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"[startup] Aviso: nao foi possivel usar '{dataProtectionKeysPath}': {ex.Message}");
+    dataProtectionKeysPath = Path.Combine(Path.GetTempPath(), "mmoneyweb-keys");
+    Directory.CreateDirectory(dataProtectionKeysPath);
+    Console.WriteLine($"[startup] Usando fallback: {dataProtectionKeysPath}");
+}
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
     .SetApplicationName("MMoneyWeb");
@@ -78,25 +90,33 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 var app = builder.Build();
 
-if (app.Configuration.GetValue("Database:RunMigrationsOnStartup", false))
-{
-    try
-    {
-        app.Logger.LogInformation("Aplicando migrations do Identity...");
-        using var scope = app.Services.CreateScope();
-        var identityDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        await identityDb.Database.MigrateAsync();
-        app.Logger.LogInformation("Migrations do Identity concluídas.");
-    }
-    catch (Exception ex)
-    {
-        app.Logger.LogError(ex, "Falha ao aplicar migrations do Identity. Verifique connection string e acesso ao SQL Server.");
-    }
-}
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.Logger.LogInformation(
     "Iniciando Kestrel em {Urls}",
     Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "http://+:8080");
+
+if (app.Configuration.GetValue("Database:RunMigrationsOnStartup", false))
+{
+    app.Lifetime.ApplicationStarted.Register(() =>
+    {
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                app.Logger.LogInformation("Aplicando migrations do Identity (background)...");
+                await using var scope = app.Services.CreateAsyncScope();
+                var identityDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                await identityDb.Database.MigrateAsync();
+                app.Logger.LogInformation("Migrations do Identity concluídas.");
+            }
+            catch (Exception ex)
+            {
+                app.Logger.LogError(ex, "Falha ao aplicar migrations do Identity. Verifique connection string e acesso ao SQL Server.");
+            }
+        });
+    });
+}
 
 // Configure the HTTP request pipeline.
 app.UseForwardedHeaders();
@@ -120,8 +140,6 @@ if (requireHttps)
 }
 
 app.UseAntiforgery();
-
-app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

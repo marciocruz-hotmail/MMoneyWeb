@@ -127,13 +127,15 @@ Copiar no painel **Environment Variables** do Coolify:
 
 | Variável | Valor | Build time? | Observação |
 |----------|-------|-------------|------------|
-| `ConnectionStrings__DefaultConnection` | connection string completa | Não | Identity |
-| `ConnectionStrings__MMoneyConnection` | mesma connection string | Não | Dados financeiros |
+| `ConnectionStrings__DefaultConnection` | connection string completa (**credenciais reais**, não `SEU_USUARIO`) | Não | Identity |
+| `ConnectionStrings__MMoneyConnection` | **mesma string** que DefaultConnection | Não | Dados financeiros |
 | `Database__RunMigrationsOnStartup` | `true` | Não | **Só no 1º deploy** |
 | `App__RequireHttps` | `false` | Não | TLS no Traefik |
 | `ASPNETCORE_ENVIRONMENT` | `Production` | Não | Já no Dockerfile |
 
 - [ ] **3.9** Variáveis configuradas (marcar como **secret** no Coolify se disponível)
+- [ ] **3.9b** **Desmarcar** "Use Docker Build Secrets" para connection strings (só runtime, não build)
+- [ ] **3.9c** `ConnectionStrings__DefaultConnection` e `ConnectionStrings__MMoneyConnection` com **a mesma** connection string válida
 - [ ] **3.10** `Database__RunMigrationsOnStartup=true` apenas no primeiro deploy
 
 ### 3.6 Auto Deploy
