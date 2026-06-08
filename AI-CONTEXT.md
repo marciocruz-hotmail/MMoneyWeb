@@ -14,7 +14,7 @@ Contexto técnico **fixo** do **MMoneyWeb** para IA e developers. Detalhe por te
 
 ## Projeto
 
-**MMoneyWeb** — aplicativo web **pessoal** de controle financeiro. Monólito Blazor com view **Lançamentos** (grid + modal CRUD) sobre banco legado `mmoneyweb`. Deploy alvo: IIS Windows Server.
+**MMoneyWeb** — aplicativo web **pessoal** de controle financeiro. Monólito Blazor com view **Lançamentos** (grid + modal CRUD) sobre banco legado `mmoneyweb`. Deploy alvo: **Linux + Coolify** (Docker); IIS Windows como legado.
 
 **Fonte de verdade:** em conflito entre documentação e código (`MMoneyWeb.Web.csproj`, `Program.cs`, estrutura real), **prevalece o repositório**.
 
@@ -29,9 +29,10 @@ Contexto técnico **fixo** do **MMoneyWeb** para IA e developers. Detalhe por te
 | Dados | SQL Server + EF Core 10 |
 | Auth | ASP.NET Core Identity (contas individuais) |
 | Testes | xUnit (`tests/MMoneyWeb.Tests`) |
-| Hospedagem alvo | Windows Server + IIS (.NET 10 Hosting Bundle) |
+| Hospedagem alvo | Linux + Coolify (Dockerfile, porta `8080`) |
+| Banco | SQL Server externo (TCP `1433`) |
 
-**Não usar nesta fase:** microsserviços, Docker, Aspire, API REST, MediatR, AutoMapper, FluentValidation, Serilog, Dapper, libs externas de UI, repository genérico.
+**Não usar nesta fase:** microsserviços, Aspire, API REST, MediatR, AutoMapper, FluentValidation, Serilog, Dapper, libs externas de UI, repository genérico.
 
 ---
 
@@ -57,19 +58,20 @@ Detalhe: `.cursor/context/2026_06_07_arquitetura-blazor-monolito.md`.
 
 ---
 
-## IIS / produção (resumo)
+## Coolify / produção Linux (resumo)
 
 | Item | Valor |
 |------|--------|
-| Caminho publicação | `C:\inetpub\vhosts\mmoneyweb.com` |
-| Site / pool IIS | `mmoneyweb.com` (pool **sem** CLR v4.0) |
-| Bindings | `mmoneyweb.com` e `www.mmoneyweb.com` (HTTP 80) |
-| Pré-requisito | .NET **10 Hosting Bundle** + WebSocket Protocol |
-| Config produção | `appsettings.Production.json` (gitignored) |
-| Script setup | `scripts/configure-iis-mmoneyweb.ps1` |
-| Histórico deploy | `docs/dev-history/2026-06-07_deploy-iis-mmoneyweb.md` |
+| Imagem | `Dockerfile` (raiz) → `mcr.microsoft.com/dotnet/aspnet:10.0` |
+| Porta | `8080` |
+| Health | `GET /health` |
+| Volume | `/app/keys` (Data Protection) |
+| Secrets | Variáveis de ambiente no Coolify (ver `.env.example`) |
+| Proxy | Traefik (HTTPS + WebSocket) |
+| CI | `.github/workflows/ci.yml` (build + test + docker build) |
+| Histórico deploy | `docs/dev-history/2026-06-08_deploy-coolify-linux.md` |
 
-`web.config`: `processPath` = caminho completo do `dotnet.exe`; pastas `logs/` e `keys/` com permissão para `IIS AppPool\mmoneyweb.com`.
+**IIS legado:** `scripts/configure-iis-mmoneyweb.ps1`, `docs/dev-history/2026-06-07_deploy-iis-mmoneyweb.md`.
 
 ---
 

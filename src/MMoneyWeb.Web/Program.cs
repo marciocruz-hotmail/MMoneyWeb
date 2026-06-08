@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MMoneyWeb.Web.Components;
@@ -9,11 +10,25 @@ using MMoneyWeb.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "keys");
+var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"];
+if (string.IsNullOrWhiteSpace(dataProtectionKeysPath))
+{
+    dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "keys");
+}
+
 Directory.CreateDirectory(dataProtectionKeysPath);
 builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
     .SetApplicationName("MMoneyWeb");
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto
+        | ForwardedHeaders.XForwardedHost;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -55,7 +70,16 @@ builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSe
 
 var app = builder.Build();
 
+if (app.Configuration.GetValue("Database:RunMigrationsOnStartup", false))
+{
+    using var scope = app.Services.CreateScope();
+    var identityDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await identityDb.Database.MigrateAsync();
+}
+
 // Configure the HTTP request pipeline.
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();
@@ -75,6 +99,8 @@ if (requireHttps)
 }
 
 app.UseAntiforgery();
+
+app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()

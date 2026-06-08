@@ -12,7 +12,7 @@ Aplicativo web pessoal de controle financeiro. Este repositório contém a **fun
 | Dados | SQL Server + Entity Framework Core 10 |
 | Autenticação | ASP.NET Core Identity (contas individuais) |
 | Testes | xUnit |
-| Hospedagem alvo | Windows Server + IIS |
+| Hospedagem alvo | Linux + Coolify (Docker) — IIS Windows legado opcional |
 
 ## Estrutura de pastas
 
@@ -39,7 +39,8 @@ MMoneyWeb/
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download) (LTS)
 - SQL Server (local ou instância acessível) — LocalDB também funciona em desenvolvimento se ajustar a connection string
-- (Publicação) Windows Server com IIS e [.NET 10 Hosting Bundle](https://dotnet.microsoft.com/download/dotnet/10.0)
+- (Publicação Linux) Servidor com [Coolify](https://coolify.io/) e Docker
+- (Publicação Windows legado) IIS + [.NET 10 Hosting Bundle](https://dotnet.microsoft.com/download/dotnet/10.0)
 
 ## Strings de conexão
 
@@ -97,7 +98,44 @@ Na primeira execução em desenvolvimento, o EF Core pode aplicar migrations do 
 dotnet test MMoneyWeb.sln
 ```
 
-### Publicação no Windows Server com IIS
+### Publicação no Linux com Coolify (recomendado)
+
+Deploy via **Dockerfile** na raiz do repositório. Coolify faz build e run automático a cada push no Git.
+
+**Guia completo:** `docs/dev-history/2026-06-08_deploy-coolify-linux.md`  
+**Checklist passo a passo:** `docs/deploy-coolify-checklist.md`
+
+**Resumo no Coolify:**
+
+| Configuração | Valor |
+|--------------|-------|
+| Build pack | Dockerfile (`/Dockerfile`) |
+| Porta exposta | `8080` |
+| Health check | `/health` |
+| Volume persistente | `/app/keys` |
+| Auto deploy | Webhook Git (push na branch `main`) |
+
+**Variáveis de ambiente** (ver `.env.example`):
+
+```text
+ConnectionStrings__DefaultConnection=Server=IP,1433;Database=mmoneyweb;...
+ConnectionStrings__MMoneyConnection=Server=IP,1433;Database=mmoneyweb;...
+Database__RunMigrationsOnStartup=false
+App__RequireHttps=false
+```
+
+No **primeiro deploy**, use `Database__RunMigrationsOnStartup=true` para aplicar migrations do Identity; depois volte para `false`.
+
+**Teste local da imagem:**
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+**Requisitos:** SQL Server acessível na porta `1433` a partir do IP do servidor Coolify; domínio com DNS apontando para o servidor; HTTPS e WebSocket gerenciados pelo Traefik do Coolify (obrigatório para Blazor Server).
+
+### Publicação no Windows Server com IIS (legado)
 
 ```powershell
 dotnet publish src\MMoneyWeb.Web\MMoneyWeb.Web.csproj -c Release -o .\publish

@@ -4,13 +4,13 @@
 > **Histórico integral:** `docs/dev-history/`  
 > **Contexto fixo:** `AI-CONTEXT.md` | **Pendências:** `BACKLOG-DEV.md` | **Índice temas:** `.cursor/context/2026_06_07_indice-memoria-ia.md`
 
-**Última atualização:** 2026-06-07 — deploy IIS + view Lançamentos
+**Última atualização:** 2026-06-08 — deploy Coolify Linux + Docker
 
 ---
 
 ## Estado atual do projeto
 
-Monólito **ASP.NET Core Blazor Web App** (.NET 10, Interactive Server) com **ASP.NET Core Identity**, **EF Core 10** e SQL Server. View **Lançamentos** com grid, filtros, modal create/edit e persistência no banco legado `mmoneyweb`. Deploy alvo: IIS em `C:\inetpub\vhosts\mmoneyweb.com` (EC2); app validado em Kestrel (HTTP 200); **IIS em ajuste final** via `scripts/configure-iis-mmoneyweb.ps1`.
+Monólito **ASP.NET Core Blazor Web App** (.NET 10, Interactive Server) com **ASP.NET Core Identity**, **EF Core 10** e SQL Server. View **Lançamentos** com grid, filtros, modal create/edit e persistência no banco legado `mmoneyweb`. **Deploy alvo:** Linux + **Coolify** (Docker, auto-deploy Git); IIS Windows mantido como legado.
 
 **Build** e **testes** xUnit OK.
 
@@ -19,16 +19,24 @@ Monólito **ASP.NET Core Blazor Web App** (.NET 10, Interactive Server) com **AS
 ## Decisões técnicas ativas
 
 - **.NET 10 LTS** + Blazor Interactive Server — monólito simples.
-- **Sem** microsserviços, Docker, Aspire, API REST, MediatR, AutoMapper, FluentValidation, Serilog, Dapper, libs UI externas, repository genérico.
+- **Sem** microsserviços, Aspire, API REST, MediatR, AutoMapper, FluentValidation, Serilog, Dapper, libs UI externas, repository genérico.
+- **Docker** apenas para deploy (Coolify); sem orquestração complexa.
 - SQL Server: `DefaultConnection` (Identity), `MMoneyConnection` (`MMoneyDbContext`).
 - `MMoneyDbContext` apenas via `IDbContextFactory` em Blazor.
 - Área principal: `[Authorize]` em `Components/Pages/_Imports.razor`.
-- Publicação alvo: IIS + .NET 10 Hosting Bundle; secrets fora do repo.
+- Publicação alvo: Coolify + Dockerfile; secrets via env no painel; volume `/app/keys`.
 - Agente: sem `git push` / deploy remoto; português BR.
 
 ---
 
 ## Últimas alterações relevantes
+
+### 2026-06-08 — Deploy Coolify Linux
+- `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `.env.example`.
+- `Program.cs`: `/health`, Forwarded Headers (proxy Traefik), migrations opcionais (`Database:RunMigrationsOnStartup`), `DataProtection:KeysPath`.
+- CI: `.github/workflows/ci.yml` (build, test, docker build).
+- Guia: `docs/dev-history/2026-06-08_deploy-coolify-linux.md`.
+- Checklist operacional: `docs/deploy-coolify-checklist.md`; script `scripts/init-git-repo.ps1`.
 
 ### 2026-06-07 — Deploy IIS (sessão EC2)
 - Servidor: site `mmoneyweb.com` (id 4), pool dedicado sem CLR, path `C:\inetpub\vhosts\mmoneyweb.com`.

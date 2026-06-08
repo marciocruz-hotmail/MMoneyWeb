@@ -6,6 +6,7 @@ Arquivo de **histórico** do projeto MMoneyWeb.
 
 | Data | Tema | Arquivo |
 |------|------|---------|
+| 2026-06-08 | Deploy Linux + Coolify (Docker, Git CI/CD) | [2026-06-08_deploy-coolify-linux.md](./2026-06-08_deploy-coolify-linux.md) |
 | 2026-06-07 | Deploy IIS EC2 (`mmoneyweb.com`) | [2026-06-07_deploy-iis-mmoneyweb.md](./2026-06-07_deploy-iis-mmoneyweb.md) |
 
 ## Uso

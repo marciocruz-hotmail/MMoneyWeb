@@ -29,16 +29,18 @@ Pendências **ativas** do **MMoneyWeb**. Itens concluídos: registo em `CHANGELO
 
 ## Alta prioridade
 
-- [ ] **M-OPS-02** — Concluir deploy IIS: reexecutar `configure-iis-mmoneyweb.ps1`, confirmar HTTP 200 em `www.mmoneyweb.com` e `mmoneyweb.com`
-- [ ] **M-OPS-03** — Republicar DLL atual (`RequireHttps` opcional + Data Protection `keys/`) em `C:\inetpub\vhosts\mmoneyweb.com`
+- [ ] **M-OPS-05** — Executar `scripts/init-git-repo.ps1`, publicar em remote Git e conectar ao Coolify (auto-deploy on push)
+- [ ] **M-OPS-06** — Primeiro deploy Coolify: env vars, volume `/app/keys`, `Database__RunMigrationsOnStartup=true` (uma vez)
+- [ ] **M-OPS-07** — Liberar SQL Server (porta 1433) para IP do servidor Coolify; validar login em produção
+- [ ] **M-OPS-08** — Domínio + HTTPS no Coolify; confirmar Blazor Server (WebSocket) estável
 - [ ] **M-SEC-01** — Desativar registro público após criação do primeiro usuário (antes de produção)
-- [ ] **M-OPS-01** — Validar `appsettings.Production.json` no servidor (connection strings reais; não commitar)
 
 ---
 
 ## Média prioridade
 
-- [ ] **M-OPS-04** — HTTPS: binding 443 + certificado (win-acme) + `App.RequireHttps: true`
+- [ ] **M-OPS-04** — HTTPS Coolify (Let's Encrypt) validado; opcional `App.RequireHttps: true` se terminar TLS no app
+- [ ] **M-OPS-09** — IIS legado: decidir descomissionar ou manter paralelo até cutover Coolify
 - [ ] **M-ARCH-01** — Entidades `Domain/` adicionais e migrations se necessário (tabelas legadas já mapeadas)
 - [ ] **M-FEAT-02** — Implementar serviços em `Services/` (sem repository genérico)
 
@@ -46,7 +48,7 @@ Pendências **ativas** do **MMoneyWeb**. Itens concluídos: registo em `CHANGELO
 
 ## Baixa prioridade
 
-- [ ] **M-OPS-02** — Pipeline CI (build + test) local ou GitHub Actions
+- [x] **M-OPS-10** — Pipeline CI GitHub Actions (build + test + docker build) — 2026-06-08
 - [ ] **M-DOC-01** — ADRs adicionais em `.cursor/context/` por padrão estabelecido
 
 ---
