@@ -1,4 +1,4 @@
-# CLAUDE.md — MMoneyWeb
+# CLAUDE.md — MMoneyWeb 
 
 Controle financeiro pessoal | .NET 10 | Blazor Web App (Interactive Server) | SQL Server + EF Core 10 | Identity  
 Respostas ao utilizador: **português brasileiro**.
