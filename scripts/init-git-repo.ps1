@@ -44,9 +44,11 @@ if (Test-Path ".git") {
 Write-Host "Status antes do commit:"
 Invoke-Git status --short
 
-$hasChanges = (Invoke-Git status --porcelain) -ne ""
-if (-not $hasChanges) {
+$porcelain = (& $git.Source status --porcelain 2>$null)
+if ([string]::IsNullOrWhiteSpace($porcelain)) {
     Write-Host "Nada para commitar (working tree limpa)."
+    Write-Host "Remote atual:"
+    & $git.Source remote -v
     exit 0
 }
 
@@ -58,10 +60,10 @@ Inclui containerizacao, proxy reverso, volume /app/keys e guia de deploy automat
 "@
 
 Write-Host ""
-Write-Host "OK: commit inicial criado na branch main." -ForegroundColor Green
+Write-Host "OK: commit criado na branch master." -ForegroundColor Green
 Write-Host ""
 Write-Host "Proximos passos:"
 Write-Host "  1. Criar repo vazio no GitHub/GitLab"
-Write-Host "  2. git remote add origin https://github.com/SEU_USUARIO/MMoneyWeb.git"
-Write-Host "  3. git push -u origin main"
+Write-Host "  2. git remote add origin https://github.com/marciocruz-hotmail/MMoneyWeb.git"
+Write-Host "  3. git push -u origin master"
 Write-Host "  4. Seguir docs/deploy-coolify-checklist.md no painel Coolify"

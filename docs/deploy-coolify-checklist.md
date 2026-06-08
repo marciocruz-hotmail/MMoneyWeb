@@ -9,7 +9,7 @@ Valores do projeto atual; substitua o que estiver marcado com `⚠️`.
 | SQL Server | `98.90.225.8,1433` |
 | Database | `mmoneyweb` |
 | App (container) | porta `8080`, health `/health` |
-| Branch produção | `main` |
+| Branch produção | `master` (repo: `marciocruz-hotmail/MMoneyWeb`) |
 
 ---
 
@@ -19,7 +19,7 @@ Valores do projeto atual; substitua o que estiver marcado com `⚠️`.
 - [ ] **0.2** Anotar o **IP público do servidor Coolify**: `_______________` ⚠️
 - [ ] **0.3** Repositório Git criado (GitHub/GitLab/Gitea): URL `_______________` ⚠️
 - [ ] **0.4** Git instalado na máquina de desenvolvimento (`git --version`)
-- [ ] **0.5** Primeiro commit publicado na branch `main` (ver `scripts/init-git-repo.ps1`)
+- [ ] **0.5** Código publicado na branch `master` (ver `scripts/init-git-repo.ps1`)
 
 ---
 
@@ -61,8 +61,8 @@ Server=98.90.225.8,1433;Database=mmoneyweb;User Id=SEU_USUARIO;Password=SUA_SENH
 - [ ] **2.3** Associar remote e publicar:
 
 ```powershell
-git remote add origin https://github.com/SEU_USUARIO/MMoneyWeb.git
-git push -u origin main
+git remote add origin https://github.com/marciocruz-hotmail/MMoneyWeb.git
+git push -u origin master
 ```
 
 - [ ] **2.4** Verificar GitHub Actions: workflow **CI** verde (build + test + docker build)
@@ -80,7 +80,7 @@ Painel Coolify → **+ New** → **Resource** → **Application**
 |-------|-------|
 | Source | GitHub / GitLab / Gitea |
 | Repository | `SEU_USUARIO/MMoneyWeb` ⚠️ |
-| Branch | `main` |
+| Branch | `master` |
 | Build Pack | **Dockerfile** |
 | Dockerfile location | `/Dockerfile` |
 | Base directory | `/` (raiz) |
@@ -189,7 +189,7 @@ Se o domínio ainda aponta para o EC2 Windows (IIS):
 ## Fluxo contínuo (após setup)
 
 ```text
-git commit → git push origin main
+git commit → git push origin master
     → GitHub Actions (CI: build + test)
     → Coolify webhook (rebuild + restart)
     → https://mmoneyweb.com atualizado
