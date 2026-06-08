@@ -8,7 +8,15 @@ using MMoneyWeb.Web.Components.Account;
 using MMoneyWeb.Web.Data;
 using MMoneyWeb.Web.Services;
 
+// Coolify e outros hosts podem injetar PORT; alinhar com ASPNETCORE_URLS.
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port))
+{
+    Environment.SetEnvironmentVariable("ASPNETCORE_URLS", $"http://+:{port}");
+}
+
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.AddConsole();
 
 var dataProtectionKeysPath = builder.Configuration["DataProtection:KeysPath"];
 if (string.IsNullOrWhiteSpace(dataProtectionKeysPath))
@@ -72,10 +80,23 @@ var app = builder.Build();
 
 if (app.Configuration.GetValue("Database:RunMigrationsOnStartup", false))
 {
-    using var scope = app.Services.CreateScope();
-    var identityDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    await identityDb.Database.MigrateAsync();
+    try
+    {
+        app.Logger.LogInformation("Aplicando migrations do Identity...");
+        using var scope = app.Services.CreateScope();
+        var identityDb = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        await identityDb.Database.MigrateAsync();
+        app.Logger.LogInformation("Migrations do Identity concluídas.");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Falha ao aplicar migrations do Identity. Verifique connection string e acesso ao SQL Server.");
+    }
 }
+
+app.Logger.LogInformation(
+    "Iniciando Kestrel em {Urls}",
+    Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "http://+:8080");
 
 // Configure the HTTP request pipeline.
 app.UseForwardedHeaders();
