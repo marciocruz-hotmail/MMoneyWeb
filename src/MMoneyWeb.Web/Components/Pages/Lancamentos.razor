@@ -1,0 +1,591 @@
+@page "/lancamentos"
+@rendermode InteractiveServer
+
+@using System.Globalization
+@using MMoneyWeb.Web.Domain
+@using MMoneyWeb.Web.Services
+@using MMoneyWeb.Web.Services.Models
+
+@inject LancamentosViewService LancamentosView
+@inject IUserLancamentosPrefsService LancamentosPrefs
+@inject NavigationManager Navigation
+
+<PageTitle>Lançamentos — MMoneyWeb</PageTitle>
+
+<div class="row mmoney-lancamentos-page">
+    <div class="col-lg-12 m-0 p-0">
+        <div class="card m-0 p-0">
+            <div class="card-title m-0 p-1">
+                <h5>Lançamentos</h5>
+            </div>
+
+            <div class="card-header m-0 p-1 d-flex flex-wrap align-items-center gap-1">
+                <button type="button"
+                        class="btn btn-outline-success d-inline-flex align-items-center gap-2"
+                        title="Novo Crédito"
+                        @onclick="AbrirNovoCreditoAsync"
+                        disabled="@carregando">
+                    <i class="bi bi-cash-coin" aria-hidden="true"></i>Novo Crédito
+                </button>
+                <button type="button"
+                        class="btn btn-outline-danger d-inline-flex align-items-center gap-2"
+                        title="Novo Débito"
+                        @onclick="AbrirNovoDebitoAsync"
+                        disabled="@carregando">
+                    <i class="bi bi-cash-stack" aria-hidden="true"></i>Novo Débito
+                </button>
+                <button type="button"
+                        class="btn btn-outline-danger d-inline-flex align-items-center gap-2"
+                        title="Excluir lançamentos selecionados"
+                        @onclick="ExcluirSelecionadosAsync"
+                        disabled="@(carregando || excluindo)">
+                    <i class="bi bi-trash" aria-hidden="true"></i>Excluir
+                </button>
+                <div class="vr mx-1 align-self-stretch"></div>
+                <div class="btn-group" role="group">
+                    <button type="button"
+                            class="btn btn-outline-info dropdown-toggle d-inline-flex align-items-center gap-2"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            disabled="@(carregando || copiando)"
+                            title="Processos em lote">
+                        <i class="bi bi-gear" aria-hidden="true"></i>Processos
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <button type="button"
+                                    class="dropdown-item"
+                                    @onclick="CopiarLancamentosProximaCompetenciaAsync"
+                                    disabled="@(carregando || copiando)">
+                                Copiar lançamentos próx. comp.
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+                <div class="mmoney-lancamentos-totais d-flex flex-wrap align-items-stretch gap-1 ms-1">
+                    <div class="mmoney-lanc-total-box mmoney-lanc-total-credito" title="Total de créditos filtrados">
+                        <span class="mmoney-lanc-total-label">Créditos</span>
+                        <span class="mmoney-lanc-total-valor">@FormatarMoeda(TotalCreditoFiltrado)</span>
+                    </div>
+                    <div class="mmoney-lanc-total-box mmoney-lanc-total-debito" title="Total de débitos filtrados">
+                        <span class="mmoney-lanc-total-label">Débitos</span>
+                        <span class="mmoney-lanc-total-valor">@FormatarMoeda(TotalDebitoFiltrado)</span>
+                    </div>
+                    <div class="mmoney-lanc-total-box mmoney-lanc-total-saldo" title="Créditos menos débitos">
+                        <span class="mmoney-lanc-total-label">Saldo</span>
+                        <span class="mmoney-lanc-total-valor @ObterClasseSaldoCreditoDebito(SaldoCreditoMenosDebito)">@FormatarMoeda(SaldoCreditoMenosDebito)</span>
+                    </div>
+                    <div class="mmoney-lanc-total-box mmoney-lanc-total-totalizador" title="Soma dos lançamentos selecionados (a receber menos a pagar)">
+                        <span class="mmoney-lanc-total-label">Totalizador</span>
+                        <span class="mmoney-lanc-total-valor @ObterClasseTotalizadorSelecionado(TotalizadorSelecionado)">@FormatarMoeda(TotalizadorSelecionado)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body m-0 p-1">
+                <div class="form-horizontal m-0 p-0 mmoney-lancamentos-filtros">
+                    <div class="row text-sm-end m-0 pt-1 align-items-center g-2">
+                        <label class="col-form-label col-sm-2 col-md-1 text-sm-end" for="lookup-conta">Conta</label>
+                        <div class="col-sm-4 col-md-3">
+                            <select id="lookup-conta" class="form-select form-select-sm" @bind="idContaSelecionada" @bind:after="OnContaOuCompetenciaAlteradaAsync">
+                                @foreach (var conta in contas)
+                                {
+                                    <option value="@conta.IdContaCorrente">@conta.Nome</option>
+                                }
+                            </select>
+                        </div>
+                        <label class="col-form-label col-sm-2 col-md-1 text-sm-end" for="lookup-competencia">Competência</label>
+                        <div class="col-sm-4 col-md-3">
+                            <select id="lookup-competencia" class="form-select form-select-sm" @bind="idCompetenciaSelecionada" @bind:after="OnContaOuCompetenciaAlteradaAsync">
+                                @foreach (var competencia in competencias)
+                                {
+                                    <option value="@competencia.IdCompetencia">@competencia.AnoMes</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body m-0 p-1">
+                @if (carregando)
+                {
+                    <div class="text-center py-4 text-body-secondary">
+                        <div class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></div>
+                        Carregando lançamentos...
+                    </div>
+                }
+                else if (linhas.Count == 0)
+                {
+                    <p class="text-body-secondary mb-0 py-3">Nenhum lançamento encontrado para a conta e competência selecionadas.</p>
+                }
+                else
+                {
+                    <div class="mmoney-lancamentos-grid-wrap">
+                        <table class="table table-sm table-hover align-middle w-100 mmoney-lancamentos-table">
+                            <thead>
+                                <tr>
+                                    <th class="col-selecao text-center" title="Selecionar">
+                                        <span class="visually-hidden">Selecionar</span>
+                                    </th>
+                                    <th class="col-data">Dt. Venc.</th>
+                                    <th class="col-dc">D/C</th>
+                                    <th class="col-parc">Parc.</th>
+                                    <th>Descrição</th>
+                                    <th class="col-valor col-moeda-th">R$ Valor</th>
+                                    <th class="col-saldo col-moeda-th">Saldo</th>
+                                    <th class="col-acao text-center" title="Editar">
+                                        <i class="bi bi-pencil" aria-hidden="true"></i>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var linha in linhas)
+                                {
+                                    <tr class="@ObterClasseLinha(linha)"
+                                        @onclick="() => AlternarSelecaoLinhaAsync(linha.IdLancamento)"
+                                        @ondblclick="() => AbrirEdicaoAsync(linha.IdLancamento)">
+                                        <td class="col-selecao text-center dt-no-row-select">
+                                            <input type="checkbox"
+                                                   class="form-check-input m-0"
+                                                   checked="@idsSelecionados.Contains(linha.IdLancamento)"
+                                                   aria-label="Selecionar lançamento nº @linha.IdLancamento"
+                                                   @onchange="e => AlternarSelecaoAsync(linha.IdLancamento, e)"
+                                                   @onclick:stopPropagation="true" />
+                                        </td>
+                                        <td class="col-data">@FormatarData(linha.DataVencimento)</td>
+                                        <td class="col-dc @(linha.IsDebito ? "dc-debito" : "dc-credito")">@linha.DebitoCredito</td>
+                                        <td class="col-parc">@linha.Parcela</td>
+                                        <td>@linha.Descricao</td>
+                                        <td class="col-valor @ObterClasseMoeda(linha.Valor)">@FormatarMoeda(linha.Valor)</td>
+                                        <td class="col-saldo @ObterClasseMoeda(linha.Saldo)">@FormatarMoeda(linha.Saldo)</td>
+                                        <td class="col-acao text-center dt-no-row-select">
+                                            <button type="button"
+                                                    class="btn btn-outline-warning btn-sm p-1 d-inline-flex align-items-center"
+                                                    title="Editar lançamento nº @linha.IdLancamento"
+                                                    @onclick="() => AbrirEdicaoAsync(linha.IdLancamento)"
+                                                    @onclick:stopPropagation="true">
+                                                <i class="bi bi-pencil" aria-hidden="true"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <div class="card-footer">
+                <button type="button" class="btn btn-outline-danger d-inline-flex align-items-center gap-2" @onclick="Sair">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>Sair
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (modalAberto && formModel is not null && lookupsModal is not null)
+{
+    <CreateEditLancamentoModal Form="@formModel"
+                               Lookups="@lookupsModal"
+                               Salvando="@salvandoModal"
+                               OnCancel="FecharModalAsync"
+                               OnSave="SalvarModalAsync" />
+}
+
+@code {
+    private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    private readonly List<ContaCorrente> contas = [];
+    private readonly List<Competencia> competencias = [];
+    private readonly List<LancamentoLinhaViewModel> linhas = [];
+    private readonly HashSet<int> idsSelecionados = [];
+
+    private int idContaSelecionada;
+    private int idCompetenciaSelecionada;
+    private bool carregando = true;
+    private bool excluindo;
+    private bool copiando;
+    private bool inicializado;
+
+    private decimal TotalCreditoFiltrado =>
+        linhas.Where(l => !l.IsDebito).Sum(l => l.Valor);
+
+    private decimal TotalDebitoFiltrado =>
+        linhas.Where(l => l.IsDebito).Sum(l => Math.Abs(l.Valor));
+
+    private decimal SaldoCreditoMenosDebito =>
+        TotalCreditoFiltrado - TotalDebitoFiltrado;
+
+    private decimal TotalizadorSelecionado =>
+        linhas.Where(l => idsSelecionados.Contains(l.IdLancamento)).Sum(l => l.Valor);
+
+    private bool modalAberto;
+    private bool salvandoModal;
+    private bool ocultarOverlayModalAposRender;
+    private bool recarregarGridAposSalvar;
+    private LancamentoFormModel? formModel;
+    private LancamentoLookupsModel? lookupsModal;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (ocultarOverlayModalAposRender)
+        {
+            ocultarOverlayModalAposRender = false;
+            await LibMessages.CarregandoHideAsync();
+        }
+
+        if (recarregarGridAposSalvar)
+        {
+            recarregarGridAposSalvar = false;
+
+            await ExecutarComErroSwalAsync(CarregarLancamentosAsync);
+        }
+
+        if (!firstRender || inicializado)
+        {
+            return;
+        }
+
+        inicializado = true;
+
+        await ExecutarComErroSwalAsync(async () =>
+        {
+            contas.Clear();
+            contas.AddRange(await LancamentosView.ObterContasAtivasAsync());
+
+            competencias.Clear();
+            competencias.AddRange(await LancamentosView.ObterCompetenciasAtivasAsync());
+
+            if (contas.Count == 0 || competencias.Count == 0)
+            {
+                await ExibirAlertaAsync("Atenção", "Não há contas correntes ou competências ativas cadastradas.");
+                return;
+            }
+
+            var prefs = await LancamentosPrefs.ObterAsync();
+            idContaSelecionada = ResolverContaId(prefs.IdContaCorrente);
+            idCompetenciaSelecionada = ResolverCompetenciaId(prefs.IdCompetencia);
+
+            await CarregarLancamentosAsync();
+        });
+
+        if (carregando)
+        {
+            carregando = false;
+            StateHasChanged();
+        }
+    }
+
+    protected async Task OnContaOuCompetenciaAlteradaAsync()
+    {
+        if (idContaSelecionada <= 0 || idCompetenciaSelecionada <= 0)
+        {
+            return;
+        }
+
+        await ExecutarComErroSwalAsync(async () =>
+        {
+            await LancamentosPrefs.SalvarAsync(idContaSelecionada, idCompetenciaSelecionada);
+            await CarregarLancamentosAsync();
+        });
+    }
+
+    protected async Task CarregarLancamentosAsync()
+    {
+        carregando = true;
+        linhas.Clear();
+        idsSelecionados.Clear();
+        StateHasChanged();
+
+        await ExecutarComErroSwalAsync(async () =>
+        {
+            var resultado = await LancamentosView.ObterLancamentosAsync(idContaSelecionada, idCompetenciaSelecionada);
+            linhas.AddRange(resultado);
+        });
+
+        carregando = false;
+        StateHasChanged();
+    }
+
+    protected Task AlternarSelecaoLinhaAsync(int idLancamento)
+    {
+        if (idsSelecionados.Contains(idLancamento))
+        {
+            idsSelecionados.Remove(idLancamento);
+        }
+        else
+        {
+            idsSelecionados.Add(idLancamento);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    protected Task AlternarSelecaoAsync(int idLancamento, ChangeEventArgs e)
+    {
+        if (e.Value is bool selecionado)
+        {
+            if (selecionado)
+            {
+                idsSelecionados.Add(idLancamento);
+            }
+            else
+            {
+                idsSelecionados.Remove(idLancamento);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    protected string ObterClasseLinha(LancamentoLinhaViewModel linha)
+    {
+        var classes = linha.StatusCssClass;
+
+        if (idsSelecionados.Contains(linha.IdLancamento))
+        {
+            classes += " mmoney-lanc-row-selecionada";
+        }
+
+        return classes;
+    }
+
+    protected async Task CopiarLancamentosProximaCompetenciaAsync()
+    {
+        if (idContaSelecionada <= 0 || idCompetenciaSelecionada <= 0)
+        {
+            return;
+        }
+
+        copiando = true;
+        await InvokeAsync(StateHasChanged);
+
+        CopiarLancamentosProximaCompetenciaResult? resultado = null;
+
+        try
+        {
+            await ExecutarComProcessandoAsync(async () =>
+            {
+                resultado = await LancamentosView.CopiarLancamentosProximaCompetenciaAsync(
+                    idContaSelecionada,
+                    idCompetenciaSelecionada);
+            }, "Copiando lançamentos para a próxima competência . . .");
+        }
+        finally
+        {
+            copiando = false;
+            await InvokeAsync(StateHasChanged);
+        }
+
+        if (resultado is null)
+        {
+            return;
+        }
+
+        var mensagem =
+            $"Competência destino: {resultado.ProximaCompetenciaAnoMes}.<br>" +
+            $"{resultado.QuantidadeCopiada} lançamento(s) copiado(s).<br>" +
+            $"{resultado.QuantidadeAtualizada} lançamento(s) atualizado(s).<br>" +
+            $"{resultado.QuantidadeIgnorada} lançamento(s) não copiado(s).";
+
+        if (resultado.QuantidadeCopiada == 0 && resultado.QuantidadeAtualizada == 0)
+        {
+            await ExibirAlertaAsync("Atenção", mensagem);
+            return;
+        }
+
+        await ExibirSucessoAsync("Concluído", mensagem);
+    }
+
+    protected async Task ExcluirSelecionadosAsync()
+    {
+        if (idsSelecionados.Count == 0)
+        {
+            await ExibirAlertaAsync("Atenção", "Selecione um ou mais lançamentos para excluir.");
+            return;
+        }
+
+        var quantidade = idsSelecionados.Count;
+        var mensagem = quantidade == 1
+            ? "Deseja realmente excluir o lançamento selecionado?"
+            : $"Deseja realmente excluir os {quantidade} lançamentos selecionados?";
+
+        if (!await ConfirmarAsync("Confirmação", mensagem))
+        {
+            return;
+        }
+
+        excluindo = true;
+        await InvokeAsync(StateHasChanged);
+
+        await ExecutarComProcessandoAsync(async () =>
+        {
+            var ids = idsSelecionados.ToArray();
+            await LancamentosView.ExcluirLancamentosAsync(ids);
+            idsSelecionados.Clear();
+            await CarregarLancamentosAsync();
+        }, "Excluindo lançamentos . . .");
+
+        excluindo = false;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected async Task AbrirNovoCreditoAsync() =>
+        await AbrirNovoComTipoAsync(LancamentosServiceBase.TipoReceber, "Receitas");
+
+    protected async Task AbrirNovoDebitoAsync() =>
+        await AbrirNovoComTipoAsync(LancamentosServiceBase.TipoPagar, "Despesas");
+
+    private async Task AbrirNovoComTipoAsync(short idTipo, string nomeCategoria)
+    {
+        await AbrirModalLancamentoAsync(async () =>
+        {
+            lookupsModal = await LancamentosView.ObterLookupsModalAsync();
+            formModel = await LancamentosView.CriarModeloNovoAsync(idContaSelecionada, idCompetenciaSelecionada);
+            formModel.IdTipo = idTipo;
+            formModel.IdCategoria = ResolverIdCategoriaPorNome(lookupsModal, nomeCategoria);
+
+            modalAberto = true;
+            return true;
+        });
+    }
+
+    private static int ResolverIdCategoriaPorNome(LancamentoLookupsModel lookups, string nomeCategoria)
+    {
+        var categoria = lookups.Categorias.FirstOrDefault(c =>
+            string.Equals(c.Nome?.Trim(), nomeCategoria, StringComparison.OrdinalIgnoreCase));
+
+        if (categoria is not null)
+        {
+            return categoria.IdCategoria;
+        }
+
+        return lookups.Categorias.Count > 0 ? lookups.Categorias[0].IdCategoria : 0;
+    }
+
+    protected async Task AbrirEdicaoAsync(int idLancamento)
+    {
+        await AbrirModalLancamentoAsync(async () =>
+        {
+            lookupsModal = await LancamentosView.ObterLookupsModalAsync();
+            formModel = await LancamentosView.ObterLancamentoParaEdicaoAsync(idLancamento);
+
+            if (formModel is null)
+            {
+                await ExibirAlertaAsync("Atenção", $"Lançamento {idLancamento} não encontrado.");
+                return false;
+            }
+
+            modalAberto = true;
+            return true;
+        });
+    }
+
+    private async Task AbrirModalLancamentoAsync(Func<Task<bool>> prepararModalAsync)
+    {
+        await LibMessages.CarregandoShowAsync("Carregando lançamento . . .");
+        var abrirModal = false;
+
+        try
+        {
+            await ExecutarComErroSwalAsync(async () =>
+            {
+                abrirModal = await prepararModalAsync();
+            });
+        }
+        finally
+        {
+            if (abrirModal)
+            {
+                ocultarOverlayModalAposRender = true;
+                await InvokeAsync(StateHasChanged);
+            }
+            else
+            {
+                await LibMessages.CarregandoHideAsync();
+            }
+        }
+    }
+
+    protected Task FecharModalAsync()
+    {
+        modalAberto = false;
+        formModel = null;
+        lookupsModal = null;
+        return Task.CompletedTask;
+    }
+
+    protected async Task SalvarModalAsync(LancamentoFormModel form)
+    {
+        if (salvandoModal)
+        {
+            return;
+        }
+
+        salvandoModal = true;
+        await InvokeAsync(StateHasChanged);
+
+        await LibMessages.CarregandoShowAsync("Salvando lançamento . . .");
+
+        try
+        {
+            await LancamentosView.SalvarLancamentoAsync(form);
+
+            modalAberto = false;
+            formModel = null;
+            lookupsModal = null;
+            salvandoModal = false;
+            recarregarGridAposSalvar = true;
+
+            await LibMessages.CarregandoHideAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            salvandoModal = false;
+            await LibMessages.CarregandoHideAsync();
+            await InvokeAsync(StateHasChanged);
+            await ExibirErroAsync("Atenção", ex);
+        }
+    }
+
+    protected int ResolverContaId(int? preferida)
+    {
+        if (preferida is > 0 && contas.Any(c => c.IdContaCorrente == preferida))
+        {
+            return preferida.Value;
+        }
+
+        return contas.Count > 0 ? contas[0].IdContaCorrente : 0;
+    }
+
+    protected int ResolverCompetenciaId(int? preferida)
+    {
+        if (preferida is > 0 && competencias.Any(c => c.IdCompetencia == preferida))
+        {
+            return preferida.Value;
+        }
+
+        return competencias.Count > 0 ? competencias[0].IdCompetencia : 0;
+    }
+
+    protected void Sair() => Navigation.NavigateTo("/");
+
+    protected static string FormatarData(DateOnly? data) =>
+        data?.ToString("dd/MM/yy", PtBr) ?? "";
+
+    protected static string FormatarMoeda(decimal valor) =>
+        valor.ToString("N2", PtBr);
+
+    protected static string ObterClasseMoeda(decimal valor) =>
+        valor < 0 ? "moeda-negativa" : "moeda-positiva";
+
+    protected static string ObterClasseSaldoCreditoDebito(decimal saldo) =>
+        saldo < 0 ? "mmoney-lanc-saldo-negativo" : "mmoney-lanc-saldo-positivo";
+
+    protected static string ObterClasseTotalizadorSelecionado(decimal total) =>
+        total < 0 ? "mmoney-lanc-totalizador-negativo" : "mmoney-lanc-totalizador-positivo";
+
+}

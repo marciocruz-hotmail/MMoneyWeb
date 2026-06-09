@@ -1,0 +1,10 @@
+/* MMoneyWeb — tokens de tema (padrão GDI: conteúdo claro + sidebar escura) */
+:root {
+    --mmoney-brand: #0d6efd;
+    --mmoney-content-bg: var(--bs-body-bg);
+}
+
+.app-sidebar[data-bs-theme="dark"] {
+    --mmoney-brand: #6ea8fe;
+    --mmoney-sidebar-bg: var(--bs-secondary-bg);
+}

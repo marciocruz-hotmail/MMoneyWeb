@@ -1,0 +1,198 @@
+@page "/Account/Login"
+@page "/UserIdentity"
+@page "/UserIdentity/Index"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text.Json
+@using Microsoft.AspNetCore.Authentication
+@using Microsoft.AspNetCore.Identity
+@using MMoneyWeb.Web.Data
+@using MMoneyWeb.Web.Services
+
+@inject UserManager<ApplicationUser> UserManager
+@inject SignInManager<ApplicationUser> SignInManager
+@inject ILogger<Login> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>MMoneyWeb</PageTitle>
+
+<div class="myform form">
+    <div class="logo mb-3">
+        <div class="text-center">
+            <img src="images/mmoney-login-logo.svg" class="img-fluid auth-login-logo" alt="Controle financeiro" />
+        </div>
+    </div>
+
+    <div class="logo mb-4">
+        <div class="text-center">
+            <h1 class="auth-login-title">MMoneyWeb</h1>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(mensagemSwal))
+    {
+        <div class="mmoney-login-feedback alert @(tipoMensagemSwal == "error" ? "alert-danger" : "alert-warning") mb-3" role="alert">
+            <div class="mmoney-login-feedback-title fw-semibold mb-1">
+                @(tipoMensagemSwal == "error" ? "Erro" : "Atenção")
+            </div>
+            <div class="mmoney-login-feedback-body">@((MarkupString)mensagemSwal)</div>
+        </div>
+        <SwalStaticMessage Kind="@tipoMensagemSwal" Message="@mensagemSwal" />
+    }
+
+    <EditForm EditContext="editContext" method="post" OnSubmit="LoginUser" FormName="login" id="UserIdentity" Enhance="false" data-mmoney-loading="Validando credenciais...">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger mb-3" role="alert" />
+        <div class="input-group mb-3">
+            <span class="input-group-text"><i class="bi bi-envelope" aria-hidden="true"></i></span>
+            <InputText @bind-Value="Input.Email" id="Input.Email" class="form-control" autocomplete="username webauthn" aria-required="true" placeholder="Informe o e-mail" autofocus />
+        </div>
+        <ValidationMessage For="() => Input.Email" class="text-danger d-block mb-2" />
+        <div class="input-group mb-3">
+            <span class="input-group-text"><i class="bi bi-lock" aria-hidden="true"></i></span>
+            <InputText type="password" @bind-Value="Input.Password" id="Input.Password" class="form-control" autocomplete="current-password" aria-required="true" placeholder="Informe a senha" />
+        </div>
+        <ValidationMessage For="() => Input.Password" class="text-danger d-block mb-3" />
+        <div class="text-center">
+            <button type="submit" class="btn w-100 mybtn btn-primary tx-tfm">Login</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    private EditContext editContext = default!;
+    private string? mensagemSwal;
+    private string tipoMensagemSwal = "alert";
+
+    [CascadingParameter]
+    private HttpContext HttpContext { get; set; } = default!;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = default!;
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Input ??= new();
+        editContext = new EditContext(Input);
+
+        try
+        {
+            if (HttpMethods.IsGet(HttpContext.Request.Method))
+            {
+                await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
+            }
+        }
+        catch (Exception ex)
+        {
+            DefinirErroComTrace(ex);
+        }
+    }
+
+    protected async Task LoginUser()
+    {
+        mensagemSwal = null;
+
+        try
+        {
+            if (!string.IsNullOrEmpty(Input.Passkey?.Error))
+            {
+                DefinirAlerta($"Erro: {Input.Passkey.Error}");
+                return;
+            }
+
+            SignInResult result;
+
+            if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
+            {
+                result = await SignInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+            }
+            else
+            {
+                if (!editContext.Validate())
+                {
+                    return;
+                }
+
+                result = await SignInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
+            }
+
+            if (result.Succeeded)
+            {
+                Logger.LogInformation("User logged in.");
+                RedirecionarAposLogin();
+                return;
+            }
+
+            if (result.RequiresTwoFactor)
+            {
+                RedirectManager.RedirectTo(
+                    "Account/LoginWith2fa",
+                    new() { ["returnUrl"] = ReturnUrl, ["rememberMe"] = Input.RememberMe });
+                return;
+            }
+
+            if (result.IsLockedOut)
+            {
+                Logger.LogWarning("User account locked out.");
+                RedirectManager.RedirectTo("Account/Lockout");
+                return;
+            }
+
+            Logger.LogWarning("Login falhou para {Email}: {Result}", Input.Email, result);
+            DefinirAlerta($"Credenciais inválidas ou conta indisponível. ({result})");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Erro ao autenticar {Email}", Input.Email);
+            DefinirErroComTrace(ex);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    protected void DefinirErroComTrace(Exception ex)
+    {
+        tipoMensagemSwal = "error";
+        mensagemSwal = LibMessageService.FormatTraceHtml(ex.ToString());
+    }
+
+    protected void DefinirAlerta(string mensagem)
+    {
+        tipoMensagemSwal = "alert";
+        mensagemSwal = mensagem;
+    }
+
+    private void RedirecionarAposLogin()
+    {
+        var destino = ReturnUrl;
+        if (string.IsNullOrWhiteSpace(destino))
+        {
+            destino = "/";
+        }
+        else if (!Uri.IsWellFormedUriString(destino, UriKind.Relative))
+        {
+            destino = NavigationManager.ToBaseRelativePath(destino);
+        }
+
+        NavigationManager.NavigateTo(destino, forceLoad: true);
+    }
+
+    private sealed class InputModel
+    {
+        [Required(ErrorMessage = "Informe o e-mail.")]
+        [EmailAddress(ErrorMessage = "Informe um e-mail válido.")]
+        public string Email { get; set; } = "";
+
+        [Required(ErrorMessage = "Informe a senha.")]
+        [DataType(DataType.Password)]
+        public string Password { get; set; } = "";
+
+        public bool RememberMe { get; set; }
+
+        public PasskeyInputModel? Passkey { get; set; }
+    }
+}

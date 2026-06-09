@@ -1,0 +1,25 @@
+# Uso local: validar imagem antes de publicar no Coolify.
+# SQL Server deve ser acessível a partir do host/container (IP + porta 1433).
+#
+#   cp .env.example .env   # preencher connection strings
+#   docker compose up --build
+
+services:
+  mmoneyweb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection}
+      ConnectionStrings__MMoneyConnection: ${ConnectionStrings__MMoneyConnection}
+      App__RequireHttps: "false"
+      Database__RunMigrationsOnStartup: ${Database__RunMigrationsOnStartup:-false}
+    volumes:
+      - mmoneyweb-keys:/app/keys
+    restart: unless-stopped
+
+volumes:
+  mmoneyweb-keys:

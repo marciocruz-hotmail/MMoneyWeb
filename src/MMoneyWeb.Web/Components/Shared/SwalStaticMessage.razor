@@ -1,0 +1,15 @@
+@* Mensagem SweetAlert após SSR/enhanced navigation — conteúdo lido por app.js (scripts inline não reexecutam). *@
+@if (!string.IsNullOrEmpty(Message))
+{
+    <div class="d-none" data-mmoney-static-swal-kind="@Kind" aria-hidden="true">
+        <div data-mmoney-static-swal-message>@((MarkupString)Message)</div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public string? Message { get; set; }
+
+    [Parameter]
+    public string Kind { get; set; } = "alert";
+}

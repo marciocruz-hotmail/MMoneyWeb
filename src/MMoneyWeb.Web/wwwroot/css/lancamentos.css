@@ -1,0 +1,284 @@
+/* MMoneyWeb — Lançamentos (layout base GDI FinanceiroLancamentos) */
+
+.mmoney-lancamentos-page .card {
+    margin: 0;
+}
+
+.mmoney-lancamentos-page .card-title {
+    margin: 0;
+    padding: 0.35rem 0.5rem;
+}
+
+.mmoney-lancamentos-page .card-title h5 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.mmoney-lancamentos-page .card-header {
+    margin: 0;
+    padding: 0.35rem 0.5rem;
+    gap: 0.35rem;
+}
+
+.mmoney-lancamentos-totais {
+    margin-left: auto;
+}
+
+.mmoney-lanc-total-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 7.5rem;
+    padding: 0.2rem 0.55rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.25rem;
+    line-height: 1.15;
+}
+
+.mmoney-lanc-total-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    opacity: 0.85;
+}
+
+.mmoney-lanc-total-valor {
+    font-size: 0.95rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.mmoney-lanc-total-credito {
+    background-color: #d4edda;
+    border-color: #b8dfc4;
+    color: #155724;
+}
+
+.mmoney-lanc-total-credito .mmoney-lanc-total-valor {
+    color: #1e7e34;
+}
+
+.mmoney-lanc-total-debito {
+    background-color: #f8d7da;
+    border-color: #f1c2c7;
+    color: #721c24;
+}
+
+.mmoney-lanc-total-debito .mmoney-lanc-total-valor {
+    color: #c0392b;
+}
+
+.mmoney-lanc-total-saldo {
+    background-color: #e9ecef;
+    border-color: #d3d9df;
+    color: #495057;
+}
+
+.mmoney-lanc-total-saldo .mmoney-lanc-saldo-positivo {
+    color: #1e7e34;
+}
+
+.mmoney-lanc-total-saldo .mmoney-lanc-saldo-negativo {
+    color: #c0392b;
+}
+
+.mmoney-lanc-total-totalizador {
+    background-color: #fff3cd;
+    border-color: #ffecb5;
+    color: #856404;
+}
+
+.mmoney-lanc-total-totalizador .mmoney-lanc-totalizador-positivo {
+    color: #1e7e34;
+}
+
+.mmoney-lanc-total-totalizador .mmoney-lanc-totalizador-negativo {
+    color: #c0392b;
+}
+
+.mmoney-lancamentos-page .card-body {
+    margin: 0;
+    padding: 0.35rem 0.5rem;
+}
+
+.mmoney-lancamentos-page .card-footer {
+    margin: 0;
+    padding: 0.5rem;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.5rem;
+    background: var(--bs-tertiary-bg);
+    border-top: 1px solid var(--bs-border-color);
+}
+
+.mmoney-lancamentos-filtros .col-form-label {
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.mmoney-lancamentos-grid-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+.mmoney-lancamentos-table {
+    font-size: 0.875rem;
+    margin-bottom: 0;
+}
+
+.mmoney-lancamentos-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bs-secondary-bg);
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.mmoney-lancamentos-table th.col-moeda-th {
+    color: var(--bs-body-color);
+}
+
+.mmoney-lancamentos-table tbody td {
+    vertical-align: middle;
+    font-size: 1rem;
+    line-height: 1.05;
+    padding-top: 0.1rem;
+    padding-bottom: 0.1rem;
+}
+
+.mmoney-lancamentos-table .col-selecao {
+    width: 2.25rem;
+    text-align: center;
+}
+
+.mmoney-lancamentos-table .col-selecao .form-check-input {
+    width: 1.05em;
+    height: 1.05em;
+    margin: 0;
+    cursor: pointer;
+}
+
+.mmoney-lancamentos-table .col-dc {
+    width: 2.5rem;
+    text-align: center;
+    font-weight: 700;
+}
+
+.mmoney-lancamentos-table .col-parc {
+    width: 4rem;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.mmoney-lancamentos-table .col-data {
+    width: 5.5rem;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.mmoney-lancamentos-table .col-valor,
+.mmoney-lancamentos-table .col-saldo {
+    text-align: end;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.mmoney-lancamentos-table .moeda-negativa {
+    color: #c0392b !important;
+}
+
+.mmoney-lancamentos-table .moeda-positiva {
+    color: #1e7e34 !important;
+}
+
+.mmoney-lancamentos-table .dc-debito {
+    color: #c0392b;
+}
+
+.mmoney-lancamentos-table .dc-credito {
+    color: #1e7e34;
+}
+
+.mmoney-lancamentos-table .col-saldo {
+    font-weight: 600;
+}
+
+.mmoney-lanc-row-quitado > td {
+    background-color: #d4edda !important;
+    color: #155724;
+}
+
+.mmoney-lanc-row-aberto > td {
+    background-color: #fff3cd !important;
+    color: #856404;
+}
+
+.mmoney-lanc-row-agendado > td {
+    background-color: #cce5ff !important;
+    color: #004085;
+}
+
+.mmoney-lanc-row-atrasado > td {
+    background-color: #f8d7da !important;
+    color: #721c24;
+}
+
+.mmoney-lancamentos-table .col-acao {
+    width: 2.75rem;
+}
+
+.mmoney-lancamentos-table tbody tr {
+    cursor: pointer;
+}
+
+.mmoney-lancamentos-table .dt-no-row-select {
+    cursor: default;
+}
+
+.mmoney-lancamentos-table .mmoney-lanc-row-selecionada > td {
+    box-shadow: inset 0 0 0 2px var(--bs-primary);
+}
+
+.mmoney-lanc-modal .mmoney-lanc-label {
+    color: #0d6efd;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0;
+    padding-top: 0.2rem;
+    padding-bottom: 0.2rem;
+}
+
+.mmoney-lanc-modal .mmoney-lanc-label-first {
+    text-align: end;
+    padding-right: 0.35rem;
+    white-space: nowrap;
+}
+
+.mmoney-lanc-modal .mmoney-lanc-form-row {
+    margin-bottom: 0.2rem;
+}
+
+.mmoney-lanc-modal .modal-body {
+    background-color: var(--bs-tertiary-bg);
+}
+
+.mmoney-lanc-modal .mmoney-lanc-form .form-control,
+.mmoney-lanc-modal .mmoney-lanc-form .form-select,
+.mmoney-lanc-modal .mmoney-lanc-form .input-group-text {
+    font-size: 1rem;
+}
+
+.mmoney-lanc-modal .mmoney-lanc-form .form-check-input {
+    width: 1.1em;
+    height: 1.1em;
+    margin-top: 0.2em;
+}
+
+.mmoney-lanc-modal .mmoney-lanc-modal-footer {
+    padding: 0.35rem 0.65rem;
+}

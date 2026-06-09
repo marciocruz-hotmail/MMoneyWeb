@@ -1,0 +1,264 @@
+/* MMoneyWeb — customizações sobre AdminLTE 4 / Bootstrap 5 (não editar vendor) */
+
+html,
+body {
+    overflow-x: hidden;
+}
+
+/* Barra de erro do Blazor — oculta até ocorrer falha não tratada */
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10000;
+    padding: 0.6rem 2.5rem 0.7rem 1.25rem;
+    color: var(--bs-body-color);
+    background: var(--bs-warning-bg-subtle, #fff3cd);
+    border-top: 1px solid var(--bs-warning-border-subtle, #ffecb5);
+    box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.15);
+}
+
+#blazor-error-ui .reload {
+    margin-left: 0.5rem;
+}
+
+#blazor-error-ui .dismiss {
+    position: absolute;
+    top: 0.45rem;
+    right: 0.75rem;
+    cursor: pointer;
+}
+
+/* AdminLTE 4 — reforço do grid do layout principal (evita colapso da sidebar) */
+.app-wrapper {
+    position: relative;
+    display: grid;
+    grid-template-areas:
+        "lte-app-sidebar lte-app-header"
+        "lte-app-sidebar lte-app-main"
+        "lte-app-sidebar lte-app-footer";
+    grid-template-rows: min-content 1fr min-content;
+    grid-template-columns: auto 1fr;
+    grid-gap: 0;
+    align-content: stretch;
+    align-items: stretch;
+    max-width: 100vw;
+    min-height: 100vh;
+}
+
+.app-wrapper > * {
+    min-width: 0;
+}
+
+.app-header {
+    grid-area: lte-app-header;
+}
+
+.app-sidebar {
+    grid-area: lte-app-sidebar;
+    min-width: var(--lte-sidebar-width, 250px);
+    max-width: var(--lte-sidebar-width, 250px);
+}
+
+.app-main {
+    grid-area: lte-app-main;
+}
+
+.app-footer {
+    grid-area: lte-app-footer;
+}
+
+/* Skip links injetados pelo AdminLTE — removidos da UI (landmarks #main / #navigation permanecem) */
+.skip-links {
+    display: none !important;
+}
+
+/* Foco programático (ex.: FocusOnNavigate) — sem caixa em títulos/textos */
+:focus:not(:focus-visible) {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+#main:focus,
+#navigation:focus,
+h1:focus,
+h2:focus,
+h3:focus,
+h4:focus,
+h5:focus,
+h6:focus,
+.mmoney-page-title:focus,
+label:focus,
+p:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Layout fixo: scroll único em .app-main (padrão GDI/AdminLTE) */
+body.layout-fixed .app-main {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+@media (min-width: 992px) {
+    body.layout-fixed.sidebar-expand-lg .app-wrapper {
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        overflow: hidden;
+    }
+}
+
+body.layout-fixed {
+    overflow: hidden;
+}
+
+/* Área principal clara (padrão GDI: body bg-body-tertiary + header/footer/cards claros) */
+.app-header,
+.app-footer {
+    background-color: var(--bs-body-bg);
+}
+
+/* Menu lateral escuro — afinação (adaptado de gdi-sidebar-nav.css) */
+.app-sidebar .sidebar-wrapper .sidebar-menu .nav-link {
+    gap: 0 !important;
+}
+
+.sidebar-wrapper .sidebar-menu > .nav-item > .nav-link > .nav-icon {
+    min-width: 1.125rem;
+    max-width: 1.125rem;
+}
+
+.sidebar-wrapper .sidebar-menu > .nav-item > .nav-link > p {
+    padding-left: 0.25rem;
+    margin-bottom: 0;
+}
+
+.app-sidebar .sidebar-brand .brand-text {
+    font-weight: 600;
+}
+
+.mmoney-page-title {
+    font-weight: 600;
+}
+
+.mmoney-loading-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.8);
+    pointer-events: auto;
+}
+
+.mmoney-loading-overlay.is-visible {
+    display: flex;
+}
+
+.mmoney-loading-panel {
+    padding: 1.5rem 2rem;
+    background: var(--bs-body-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    max-width: min(420px, 90vw);
+}
+
+.mmoney-loading-message {
+    color: var(--bs-secondary-color);
+    font-size: 1rem;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+/* Layout de autenticação (login/registro) */
+.auth-layout {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bs-body-bg);
+}
+
+.auth-layout .auth-card {
+    width: 100%;
+    max-width: 840px;
+    font-size: 2rem;
+}
+
+.auth-layout .auth-panel {
+    width: 100%;
+}
+
+.auth-layout .auth-panel .card-body {
+    padding: 2.5rem 3rem;
+}
+
+.auth-layout .auth-panel h1 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+}
+
+.auth-layout .auth-panel h2 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+}
+
+.auth-layout .auth-panel .form-control {
+    font-size: 1.125rem;
+    min-height: 4.25rem;
+    padding: 1.25rem 1rem 0.5rem;
+}
+
+.auth-layout .auth-panel .form-floating > label {
+    font-size: 1.125rem;
+    padding: 1.25rem 1rem;
+}
+
+.auth-layout .auth-panel .form-check-input {
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-top: 0.15rem;
+}
+
+.auth-layout .auth-panel .form-check-label,
+.auth-layout .auth-panel .checkbox label {
+    font-size: 1.125rem;
+    padding-left: 0.5rem;
+}
+
+.auth-layout .auth-panel .btn-lg {
+    font-size: 1.375rem;
+    padding: 1rem 1.5rem;
+    min-height: 4rem;
+}
+
+.auth-layout .auth-panel hr {
+    margin: 1.75rem 0;
+}
+
+.auth-layout .auth-panel .text-danger,
+.auth-layout .auth-panel .validation-message {
+    font-size: 1rem;
+}
+
+/* SweetAlert2 — trace de exceção (LibMessageService) */
+.swal2-html-container .mmoney-swal-trace {
+    text-align: left;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 60vh;
+    overflow: auto;
+    font-size: 0.8rem;
+    margin: 0;
+    padding: 0.5rem;
+    background: var(--bs-tertiary-bg, #f8f9fa);
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 0.25rem;
+}
